@@ -1,6 +1,7 @@
 import { createAuthService } from "./auth/authService.js";
 import { createWeChatOAuth } from "./auth/wechat.js";
 import { createRedisVerificationStore } from "./cache/redisVerificationStore.js";
+import { validateRuntimeEnv } from "./config.js";
 import { createCompositeNotifier } from "./notifiers.js";
 import { createRateLimiter } from "./rateLimit.js";
 import { DemoLanguagePartnerProvider } from "./providers/demoProvider.js";
@@ -9,6 +10,10 @@ import { createMemoryAppStore } from "./store/memoryAppStore.js";
 import { createPostgresAppStore } from "./store/postgresAppStore.js";
 import type { AppStore } from "./store/types.js";
 import type { LanguagePartnerProvider, SpeechProvider } from "./providers/types.js";
+import pg from "pg";
+import { createClient } from "redis";
+
+const { Pool } = pg;
 
 async function createStore(): Promise<AppStore> {
   const store = process.env.DATABASE_URL
@@ -36,6 +41,7 @@ function createProvider(): LanguagePartnerProvider & SpeechProvider {
 }
 
 export async function createRuntime() {
+  validateRuntimeEnv();
   const store = await createStore();
   const auth = createAuthService({
     stores: store.auth,
@@ -59,5 +65,32 @@ export async function createRuntime() {
       limit: Number(process.env.TTS_RATE_LIMIT_PER_MINUTE || 10),
       windowMs: 60 * 1000,
     }),
+    healthChecks: {
+      async database() {
+        if (!process.env.DATABASE_URL) return { ok: true };
+        const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+        try {
+          await pool.query("select 1");
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        } finally {
+          await pool.end().catch(() => undefined);
+        }
+      },
+      async redis() {
+        if (!process.env.REDIS_URL) return { ok: true };
+        const client = createClient({ url: process.env.REDIS_URL });
+        try {
+          await client.connect();
+          await client.ping();
+          return { ok: true };
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        } finally {
+          await client.quit().catch(() => undefined);
+        }
+      },
+    },
   };
 }
