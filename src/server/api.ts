@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { nanoid } from "nanoid";
 import { normalizeLanguageTips } from "../shared/languageTips.js";
 import { clearSessionCookie, getSessionToken, setSessionCookie } from "./cookies.js";
+import { buildHealthStatus } from "./health.js";
 import { buildProactivePrompt, normalizeProactiveSettings, shouldCreateProactiveNudge } from "./proactive.js";
 import { sanitizeChatMessages } from "./requestGuards.js";
 import type { AuthService } from "./auth/authService.js";
@@ -19,6 +20,10 @@ interface ApiDependencies {
   speech: SpeechProvider;
   chatLimiter: ReturnType<typeof createRateLimiter>;
   ttsLimiter: ReturnType<typeof createRateLimiter>;
+  healthChecks?: {
+    database?: () => Promise<{ ok: boolean; error?: string }>;
+    redis?: () => Promise<{ ok: boolean; error?: string }>;
+  };
 }
 
 function toClientMessage(message: MessageRecord) {
@@ -52,6 +57,15 @@ function sendError(res: Response, error: unknown) {
 
 export function registerApiRoutes(deps: ApiDependencies) {
   const { app, store, auth } = deps;
+
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const health = await buildHealthStatus({ checks: deps.healthChecks });
+      res.status(health.ok ? 200 : 503).json(health);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
 
   app.post("/api/auth/send-code", async (req, res) => {
     try {
