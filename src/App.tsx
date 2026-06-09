@@ -16,6 +16,13 @@ const DEFAULT_PROACTIVE_SETTINGS: ProactiveSettings = {
   favoriteTopics: [],
 };
 
+const THEME_STORAGE_KEY = "hina.theme";
+
+function loadTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+}
+
 function greeting(): Message {
   return {
     id: nanoid(),
@@ -43,7 +50,7 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(() => loadTheme());
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [proactiveSettings, setProactiveSettings] = useState<ProactiveSettings>(DEFAULT_PROACTIVE_SETTINGS);
@@ -58,6 +65,8 @@ export default function App() {
 
   useEffect(() => {
     document.body.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
   const loadUserData = useCallback(async () => {
@@ -175,6 +184,8 @@ export default function App() {
     return <AuthPanel onAuthed={setUser} />;
   }
 
+  const HinaHeaderIcon = theme === "dark" ? Moon : Sun;
+
   return (
     <div className={`flex flex-col h-screen font-sans transition-colors duration-300 ${theme} bg-[#FDFBF7] dark:bg-[#1c1224] text-[#4A4A4A] dark:text-[#e5dceb] selection:bg-[#FFD166]/30`}>
       <header className="flex-none border-b border-[#E8E2D6] dark:border-[#3a2347] px-4 py-3 sm:px-8 flex items-center justify-between bg-white/50 dark:bg-[#1c1224]/80 backdrop-blur-sm z-10 sticky top-0 shadow-[0_1px_2px_-1px_rgba(0,0,0,0.05)]">
@@ -183,8 +194,9 @@ export default function App() {
             animate={speakingMessageId ? { scale: [1, 1.15, 1], rotate: [-2, 2, -2] } : {}}
             transition={speakingMessageId ? { duration: 0.6, repeat: Infinity } : {}}
             className="w-12 h-12 rounded-full border-2 border-white dark:border-[#1c1224] shadow-sm flex items-center justify-center overflow-hidden bg-[#FFD166] text-white"
+            data-hina-avatar={theme === "dark" ? "moon" : "sun"}
           >
-            <Sun size={28} strokeWidth={2.5} />
+            <HinaHeaderIcon size={28} strokeWidth={2.5} />
           </motion.div>
           <div>
             <h1 className="font-bold text-lg text-[#2D2D2D] dark:text-white leading-tight tracking-normal">Hina</h1>
@@ -224,11 +236,13 @@ export default function App() {
                 isSpeaking={speakingMessageId === message.id}
                 onPlayAudio={() => playAudio(message.text, message.id)}
                 userPhotoUrl={user.avatarUrl}
+                theme={theme}
               />
             ))}
             {isTyping && (
               <ChatMessage
                 message={{ id: "typing", role: "model", text: "", timestamp: Date.now(), isTyping: true }}
+                theme={theme}
               />
             )}
             <div ref={messagesEndRef} className="h-1 py-1" />

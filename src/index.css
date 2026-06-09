@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
   font-family: ui-sans-serif, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;

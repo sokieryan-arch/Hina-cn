@@ -12,13 +12,16 @@ export interface LanguageTip {
 const FALLBACK_TIPS: LanguageTip[] = [
   {
     type: "correction",
-    title: "Tiny fluency check",
-    body: "If your sentence is already clear, Hina will keep this light and focus on sounding natural.",
+    title: "Tiny grammar fix",
+    body: "Polish one specific phrase from your message. For example: \"where are you located in now?\" sounds more natural as \"Where are you based now?\"",
+    original: "where are you located in now?",
+    suggestion: "Where are you based now?",
   },
   {
     type: "expression",
     title: "Phrase to steal",
-    body: "Try reusing one useful phrase from Hina's reply in your next message.",
+    body: "Try reusing a vivid phrase like \"rent-free in my mind（一直萦绕在脑海里）\" when something keeps popping back into your thoughts.",
+    example: "That tiny coffee shop lives rent-free in my mind.",
   },
 ];
 

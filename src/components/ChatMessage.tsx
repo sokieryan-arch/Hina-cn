@@ -1,4 +1,4 @@
-import { CheckCircle2, Lightbulb, MessageCircle, Sun, UserCircle, Volume2 } from "lucide-react";
+import { CheckCircle2, Lightbulb, MessageCircle, Moon, Sun, UserCircle, Volume2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { Message } from "../shared/types.js";
 import { cn } from "../lib/utils.js";
@@ -8,19 +8,25 @@ interface ChatMessageProps {
   isSpeaking?: boolean;
   onPlayAudio?: () => void;
   userPhotoUrl?: string | null;
+  theme?: "light" | "dark";
 }
 
-export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl }: ChatMessageProps) {
+export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, theme = "light" }: ChatMessageProps) {
   const isUser = message.role === "user";
   const isTip = message.type === "tip";
   const isCorrectionTip = isTip && message.tipKind === "correction";
   const isExpressionTip = isTip && message.tipKind !== "correction";
+  const ThemeAvatarIcon = theme === "dark" ? Moon : Sun;
+  const themedAvatarName = theme === "dark" ? "moon" : "sun";
 
   if (message.isTyping) {
     return (
       <div className="flex w-full mt-6 gap-4 max-w-[80%]">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm bg-[#FFD166] text-white">
-          <Sun size={24} strokeWidth={2.5} />
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm bg-[#FFD166] text-white"
+          data-hina-avatar={themedAvatarName}
+        >
+          <ThemeAvatarIcon size={24} strokeWidth={2.5} />
         </div>
         <div className="bg-white dark:bg-[#291a33] p-4 rounded-2xl rounded-tl-none shadow-sm border border-[#F0EADF] dark:border-[#3a2347]">
           <div className="flex space-x-1.5 h-6 items-center px-1">
@@ -64,12 +70,21 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl }: 
           <motion.div
             animate={isSpeaking ? { scale: [1, 1.15, 1], rotate: [-2, 2, -2] } : {}}
             transition={isSpeaking ? { duration: 0.6, repeat: Infinity } : {}}
+            data-hina-avatar={
+              isCorrectionTip
+                ? "correction"
+                : isExpressionTip
+                  ? "expression"
+                  : message.type === "proactive"
+                    ? "proactive"
+                    : themedAvatarName
+            }
             className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center shadow-sm overflow-hidden",
               isTip ? "bg-[#FFD166] dark:bg-[#660874] text-black dark:text-white" : "bg-[#FFD166] text-white",
             )}
           >
-            {isTip ? (isCorrectionTip ? <CheckCircle2 size={22} /> : <Lightbulb size={22} />) : message.type === "proactive" ? <MessageCircle size={22} /> : <Sun size={24} strokeWidth={2.5} />}
+            {isTip ? (isCorrectionTip ? <CheckCircle2 size={22} /> : <Lightbulb size={22} />) : message.type === "proactive" ? <MessageCircle size={22} /> : <ThemeAvatarIcon size={24} strokeWidth={2.5} />}
           </motion.div>
         )}
       </div>
