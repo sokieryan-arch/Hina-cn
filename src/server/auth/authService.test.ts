@@ -76,3 +76,22 @@ test("logs in with password and resets forgotten password with a code", async ()
   });
   assert.equal(nextLogin.user.phone, "+8613812345678");
 });
+
+test("surfaces production notifier failures instead of pretending a code was sent", async () => {
+  const stores = createMemoryAuthStores();
+  const auth = createAuthService({
+    stores,
+    codeGenerator: () => "123456",
+    now: () => new Date("2026-06-09T08:00:00Z"),
+    notifier: {
+      async sendCode() {
+        throw Object.assign(new Error("email_not_configured"), { statusCode: 503 });
+      },
+    },
+  });
+
+  await assert.rejects(
+    auth.sendCode({ target: "sokie@example.com", purpose: "register" }),
+    /email_not_configured/,
+  );
+});
