@@ -50,3 +50,41 @@ test("reports production database and redis check failures without secret values
   assert.equal(serialized.includes("secret-pass"), false);
   assert.equal(serialized.includes("ark-secret-value"), false);
 });
+
+test("reports email configuration status without secret values", async () => {
+  const missingEmail = await buildHealthStatus({
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://user:secret-pass@db.example.cn/hina",
+      REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",
+      ARK_API_KEY: "ark-secret-value",
+      ARK_CHAT_MODEL: "doubao-model",
+    },
+    uptimeSeconds: () => 3,
+  });
+
+  assert.equal(missingEmail.ok, false);
+  assert.equal(missingEmail.email.configured, false);
+  assert.equal(missingEmail.email.ok, false);
+  assert.equal(JSON.stringify(missingEmail).includes("secret-pass"), false);
+
+  const configuredEmail = await buildHealthStatus({
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://user:secret-pass@db.example.cn/hina",
+      REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",
+      ARK_API_KEY: "ark-secret-value",
+      ARK_CHAT_MODEL: "doubao-model",
+      SMTP_HOST: "smtp.example.cn",
+      SMTP_USER: "mailer@example.cn",
+      SMTP_PASS: "smtp-secret",
+    },
+    uptimeSeconds: () => 3,
+  });
+
+  const serialized = JSON.stringify(configuredEmail);
+  assert.equal(configuredEmail.email.configured, true);
+  assert.equal(configuredEmail.email.ok, true);
+  assert.equal(serialized.includes("smtp-secret"), false);
+  assert.equal(serialized.includes("mailer@example.cn"), false);
+});

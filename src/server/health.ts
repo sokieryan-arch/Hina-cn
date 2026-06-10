@@ -1,9 +1,14 @@
+import { getEmailHealth } from "./notifiers.js";
+
 interface HealthEnv {
   NODE_ENV?: string;
   DATABASE_URL?: string;
   REDIS_URL?: string;
   ARK_API_KEY?: string;
   ARK_CHAT_MODEL?: string;
+  SMTP_HOST?: string;
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
 }
 
 interface CheckResult {
@@ -61,13 +66,15 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
       ok: !isProduction,
       missing: ["ARK_API_KEY", "ARK_CHAT_MODEL"].filter((key) => !env[key as keyof HealthEnv]),
     };
+  const email = getEmailHealth(env);
 
   return {
-    ok: database.ok && redis.ok && model.ok,
+    ok: database.ok && redis.ok && model.ok && email.ok,
     env: env.NODE_ENV || "development",
     uptimeSeconds: Math.floor(options.uptimeSeconds?.() ?? process.uptime()),
     database,
     redis,
     model,
+    email,
   };
 }

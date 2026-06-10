@@ -1,0 +1,20 @@
+[Unit]
+Description=Hina CN Web Service
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/Hina-cn
+# For temporary public-IP HTTP testing, change this to /opt/Hina-cn/.env.
+# For real production behind HTTPS, keep /opt/Hina-cn/.env.production.
+EnvironmentFile=/opt/Hina-cn/.env.production
+ExecStart=/usr/local/bin/node /opt/Hina-cn/dist/server.cjs
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

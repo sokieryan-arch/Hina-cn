@@ -27,12 +27,12 @@ Production requires persistent storage and real Ark configuration:
 - `DATABASE_URL`
 - `ARK_API_KEY`
 - `ARK_CHAT_MODEL`
+- `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` for email verification
 
 Optional but recommended for test deployment:
 
 - `REDIS_URL`
 - `APP_URL`
-- `SMTP_*`
 - `WECHAT_APP_ID` and `WECHAT_APP_SECRET`
 
 Health check:
@@ -41,4 +41,8 @@ Health check:
 curl http://localhost:3000/api/health
 ```
 
-Docker and Volcengine deployment notes live in `docs/deploy-volcengine.md`. Use `.env.production.example` as the production template; never commit `.env` or `.env.production`.
+For the current low-cost single-ECS path, use `docs/production-single-ecs.md`.
+Docker and managed-resource Volcengine deployment notes live in `docs/deploy-volcengine.md`.
+Use `.env.production.example` as the production template; never commit `.env` or `.env.production`.
+
+Important: production mode expects a real HTTPS domain. For temporary bare public-IP testing, keep `NODE_ENV=development` in `.env`.
