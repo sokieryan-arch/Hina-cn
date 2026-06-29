@@ -1,4 +1,5 @@
 import type { LanguageTipType } from "../../shared/languageTips.js";
+import type { BillingPlan, BillingSummary } from "../billing.js";
 import type { ProactiveSettings } from "../proactive.js";
 import type { AuthStores } from "../auth/types.js";
 
@@ -37,8 +38,15 @@ export interface ProactiveSettingsStore {
   markProactiveNudge(userId: string, at: Date): Promise<void>;
 }
 
+export interface BillingStore {
+  getBillingSummary(userId: string, now?: Date): Promise<BillingSummary>;
+  incrementChatUsage(userId: string, now?: Date): Promise<BillingSummary>;
+  setPlan(userId: string, plan: BillingPlan, proExpiresAt?: Date | null, now?: Date): Promise<BillingSummary>;
+}
+
 export interface AppStore {
   auth: AuthStores;
   messages: MessageStore;
   proactive: ProactiveSettingsStore;
+  billing: BillingStore;
 }

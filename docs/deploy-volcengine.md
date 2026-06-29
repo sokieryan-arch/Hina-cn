@@ -8,6 +8,7 @@ This guide deploys the Web/H5 test version to a mainland China server. Keep real
 - RDS PostgreSQL: create a database for Hina and allow ECS access.
 - Redis: create an instance for verification codes and short-lived cache.
 - Volcengine Ark: create an API key and confirm the model or endpoint ID works with `ARK_CHAT_MODEL`.
+- SMTP mailbox: configure a sender account for real email verification codes.
 - Domain and HTTPS: point a test domain to the ECS public IP before WeChat login testing.
 
 ## 2. Configure Environment
@@ -29,6 +30,10 @@ ARK_API_KEY=...
 ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 ARK_CHAT_MODEL=...
 APP_URL=https://your-domain.example.cn
+SMTP_HOST=...
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=Hina <no-reply@your-domain.example.cn>
 ```
 
 Never commit `.env.production`.
@@ -76,7 +81,7 @@ Check health:
 curl http://127.0.0.1:3000/api/health
 ```
 
-The health response reports database, Redis, and Ark model configuration status without returning secret values.
+The health response reports database, Redis, Ark model, and email configuration status without returning secret values.
 
 ## 5. Reverse Proxy
 
@@ -108,5 +113,6 @@ Database migrations should be additive for test deployments. Avoid destructive s
 - `Missing required production environment variables`: check `SESSION_SECRET`, `DATABASE_URL`, `ARK_API_KEY`, and `ARK_CHAT_MODEL`.
 - `/api/health` returns database failure: confirm RDS whitelist/security group and `DATABASE_URL`.
 - `/api/health` returns Redis failure: confirm Redis password, port, and security group.
+- `/api/health` returns email failure: configure `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS`.
 - Chat returns `ark_chat_failed`: confirm `ARK_BASE_URL` is exactly `https://ark.cn-beijing.volces.com/api/v3` and `ARK_CHAT_MODEL` is a callable model or endpoint ID.
 - WeChat login fails: configure a public HTTPS domain in WeChat Open Platform; localhost callbacks will not work for real website OAuth.

@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import pg from "pg";
+import { buildBillingSummary, getUsageDate } from "../billing.js";
 import { normalizeProactiveSettings } from "../proactive.js";
 import type { ParsedIdentifier, UserRecord } from "../auth/types.js";
 import type { AppStore, CreateMessageInput, MessageRecord, ProactiveSettingsRecord } from "./types.js";
@@ -36,6 +37,21 @@ function rowToMessage(row: any): MessageRecord {
 
 export function createPostgresAppStore(databaseUrl: string): AppStore {
   const pool = new Pool({ connectionString: databaseUrl });
+
+  async function getBillingSummary(userId: string, now = new Date()) {
+    const usageDate = getUsageDate(now);
+    const [entitlementResult, usageResult] = await Promise.all([
+      pool.query("select * from user_entitlements where user_id = $1", [userId]),
+      pool.query("select chat_count from usage_daily where user_id = $1 and usage_date = $2", [userId, usageDate]),
+    ]);
+    const entitlement = entitlementResult.rows[0];
+    return buildBillingSummary({
+      plan: entitlement?.plan ?? "free",
+      proExpiresAt: entitlement?.pro_expires_at ?? null,
+      chatCount: usageResult.rows[0]?.chat_count ?? 0,
+      now,
+    });
+  }
 
   async function getProactiveSettings(userId: string): Promise<ProactiveSettingsRecord> {
     const result = await pool.query("select * from proactive_settings where user_id = $1", [userId]);
@@ -300,6 +316,29 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           `update proactive_settings set last_nudge_at = $2, updated_at = now() where user_id = $1`,
           [userId, at],
         );
+      },
+    },
+    billing: {
+      getBillingSummary,
+      async incrementChatUsage(userId, now = new Date()) {
+        await pool.query(
+          `insert into usage_daily (user_id, usage_date, chat_count)
+           values ($1, $2, 1)
+           on conflict (user_id, usage_date)
+           do update set chat_count = usage_daily.chat_count + 1, updated_at = now()`,
+          [userId, getUsageDate(now)],
+        );
+        return getBillingSummary(userId, now);
+      },
+      async setPlan(userId, plan, proExpiresAt = null, now = new Date()) {
+        await pool.query(
+          `insert into user_entitlements (user_id, plan, pro_expires_at)
+           values ($1, $2, $3)
+           on conflict (user_id)
+           do update set plan = excluded.plan, pro_expires_at = excluded.pro_expires_at, updated_at = now()`,
+          [userId, plan, proExpiresAt],
+        );
+        return getBillingSummary(userId, now);
       },
     },
   };

@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { nanoid } from "nanoid";
 import { normalizeLanguageTips } from "../shared/languageTips.js";
+import { canUseChat } from "./billing.js";
 import { clearSessionCookie, getSessionToken, setSessionCookie } from "./cookies.js";
 import { buildHealthStatus } from "./health.js";
 import { buildProactivePrompt, normalizeProactiveSettings, shouldCreateProactiveNudge } from "./proactive.js";
@@ -137,6 +138,24 @@ export function registerApiRoutes(deps: ApiDependencies) {
     }
   });
 
+  app.get("/api/billing/me", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      res.json({ billing: await store.billing.getBillingSummary(user.id) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/billing/checkout", async (req, res) => {
+    try {
+      await requireUser(req, deps);
+      res.status(503).json({ error: "billing_not_ready" });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
   app.get("/api/auth/wechat/url", (_req, res) => {
     try {
       const state = nanoid(24);
@@ -217,6 +236,11 @@ export function registerApiRoutes(deps: ApiDependencies) {
       const limit = deps.chatLimiter.consume(user.id);
       if (!limit.allowed) return res.status(429).json({ error: "rate_limited", retryAfterMs: limit.retryAfterMs });
 
+      const billing = await store.billing.getBillingSummary(user.id);
+      if (!canUseChat(billing)) {
+        return res.status(402).json({ error: "quota_exceeded", billing });
+      }
+
       const messages = sanitizeChatMessages(req.body?.messages);
       const lastUser = [...messages].reverse().find((message) => message.role === "user");
       if (lastUser) {
@@ -247,10 +271,12 @@ export function registerApiRoutes(deps: ApiDependencies) {
           tipKind: tip.type,
         }));
       }
+      const nextBilling = await store.billing.incrementChatUsage(user.id);
 
       res.json({
         response: data.response,
         tips,
+        billing: nextBilling,
         messages: [responseMessage, ...tipMessages].map(toClientMessage),
       });
     } catch (error) {

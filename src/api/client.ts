@@ -1,4 +1,16 @@
-import type { CurrentUser, Message, ProactiveSettings } from "../shared/types.js";
+import type { BillingSummary, CurrentUser, Message, ProactiveSettings } from "../shared/types.js";
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -12,7 +24,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(typeof data.error === "string" ? data.error : "request_failed");
+    throw new ApiError(typeof data.error === "string" ? data.error : "request_failed", response.status, data);
   }
   return data as T;
 }
@@ -48,8 +60,10 @@ export const api = {
     }),
   messages: () => apiFetch<{ messages: Message[] }>("/api/messages"),
   clearMessages: () => apiFetch<{ ok: true }>("/api/messages", { method: "DELETE" }),
+  billingMe: () => apiFetch<{ billing: BillingSummary }>("/api/billing/me"),
+  billingCheckout: () => apiFetch<never>("/api/billing/checkout", { method: "POST" }),
   chat: (messages: Pick<Message, "role" | "text">[]) =>
-    apiFetch<{ response: string; messages: Message[] }>("/api/chat", {
+    apiFetch<{ response: string; messages: Message[]; billing: BillingSummary }>("/api/chat", {
       method: "POST",
       body: JSON.stringify({ messages }),
     }),
