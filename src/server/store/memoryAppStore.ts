@@ -1,8 +1,10 @@
 import { nanoid } from "nanoid";
+import { buildBillingSummary, getUsageDate } from "../billing.js";
 import { normalizeProactiveSettings } from "../proactive.js";
 import { createMemoryAuthStores } from "../auth/memoryStores.js";
 import type {
   AppStore,
+  BillingStore,
   CreateMessageInput,
   MessageRecord,
   ProactiveSettingsRecord,
@@ -12,6 +14,8 @@ export function createMemoryAppStore(): AppStore {
   const auth = createMemoryAuthStores();
   const messages = new Map<string, MessageRecord[]>();
   const proactive = new Map<string, ProactiveSettingsRecord>();
+  const entitlements = new Map<string, { plan: "free" | "pro"; proExpiresAt: Date | null }>();
+  const usageDaily = new Map<string, number>();
 
   async function getProactiveSettings(userId: string) {
     const existing = proactive.get(userId);
@@ -20,6 +24,31 @@ export function createMemoryAppStore(): AppStore {
     proactive.set(userId, initial);
     return initial;
   }
+
+  function usageKey(userId: string, now: Date) {
+    return `${userId}:${getUsageDate(now)}`;
+  }
+
+  const billing: BillingStore = {
+    async getBillingSummary(userId, now = new Date()) {
+      const entitlement = entitlements.get(userId) ?? { plan: "free" as const, proExpiresAt: null };
+      return buildBillingSummary({
+        plan: entitlement.plan,
+        proExpiresAt: entitlement.proExpiresAt,
+        chatCount: usageDaily.get(usageKey(userId, now)) ?? 0,
+        now,
+      });
+    },
+    async incrementChatUsage(userId, now = new Date()) {
+      const key = usageKey(userId, now);
+      usageDaily.set(key, (usageDaily.get(key) ?? 0) + 1);
+      return this.getBillingSummary(userId, now);
+    },
+    async setPlan(userId, plan, proExpiresAt = null, now = new Date()) {
+      entitlements.set(userId, { plan, proExpiresAt });
+      return this.getBillingSummary(userId, now);
+    },
+  };
 
   return {
     auth,
@@ -60,5 +89,6 @@ export function createMemoryAppStore(): AppStore {
         proactive.set(userId, { ...current, lastNudgeAt: at });
       },
     },
+    billing,
   };
 }

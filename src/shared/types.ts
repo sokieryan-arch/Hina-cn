@@ -30,3 +30,12 @@ export interface CurrentUser {
   hasPassword: boolean;
   hasWeChat: boolean;
 }
+
+export interface BillingSummary {
+  plan: "free" | "pro";
+  isPro: boolean;
+  dailyLimit: number | null;
+  usedToday: number;
+  remainingToday: number | null;
+  resetAt: string;
+}

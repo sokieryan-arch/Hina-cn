@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LogOut, Moon, Send, Settings, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { nanoid } from "nanoid";
-import { api } from "./api/client.js";
+import { ApiError, api } from "./api/client.js";
 import { AuthPanel } from "./components/AuthPanel.js";
 import { ChatMessage } from "./components/ChatMessage.js";
 import { SettingsModal } from "./components/SettingsModal.js";
-import type { CurrentUser, Message, ProactiveSettings } from "./shared/types.js";
+import type { BillingSummary, CurrentUser, Message, ProactiveSettings } from "./shared/types.js";
 
 const DEFAULT_PROACTIVE_SETTINGS: ProactiveSettings = {
   enabled: false,
@@ -40,8 +40,21 @@ function chatError(error: unknown) {
     missing_ark_api_key: "Hina's server is missing ARK_API_KEY.",
     missing_ark_chat_model: "Hina's server is missing ARK_CHAT_MODEL.",
     rate_limited: "Tiny pause. Hina needs a sip of tea before the next reply.",
+    quota_exceeded: "Today's free chats are used up. Pro is coming soon.",
   };
   return map[message] ?? `I hit a snag on my side (${message || "chat_failed"}). Try me again in a moment?`;
+}
+
+function billingFromError(error: unknown): BillingSummary | null {
+  if (!(error instanceof ApiError) || error.message !== "quota_exceeded") return null;
+  const billing = (error.data as { billing?: BillingSummary })?.billing;
+  return billing ?? null;
+}
+
+function billingLabel(billing: BillingSummary | null) {
+  if (!billing) return "Loading plan...";
+  if (billing.isPro) return "Pro - unlimited chats";
+  return `Free - ${billing.usedToday}/${billing.dailyLimit} chats today`;
 }
 
 export default function App() {
@@ -54,6 +67,8 @@ export default function App() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [proactiveSettings, setProactiveSettings] = useState<ProactiveSettings>(DEFAULT_PROACTIVE_SETTINGS);
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
+  const [quotaNotice, setQuotaNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -72,14 +87,17 @@ export default function App() {
   const loadUserData = useCallback(async () => {
     if (!user) {
       setMessages([]);
+      setBilling(null);
       return;
     }
-    const [messageResult, settingsResult] = await Promise.all([
+    const [messageResult, settingsResult, billingResult] = await Promise.all([
       api.messages(),
       api.getProactiveSettings(),
+      api.billingMe(),
     ]);
     setMessages(messageResult.messages.length > 0 ? messageResult.messages : [greeting()]);
     setProactiveSettings(settingsResult.settings);
+    setBilling(billingResult.billing);
   }, [user]);
 
   useEffect(() => {
@@ -138,9 +156,14 @@ export default function App() {
 
   const handleSend = async () => {
     if (!inputValue.trim() || isTyping || !user) return;
+    if (billing?.remainingToday === 0) {
+      setQuotaNotice("Free chats are used today. Pro is coming soon.");
+      return;
+    }
 
     const userText = inputValue.trim();
     setInputValue("");
+    setQuotaNotice(null);
     const userMsg: Message = {
       id: nanoid(),
       role: "user",
@@ -156,10 +179,17 @@ export default function App() {
       const result = await api.chat([...recentPlainMessages, { role: "user", text: userText }]);
       setIsTyping(false);
       setMessages((prev) => [...prev, ...result.messages]);
+      setBilling(result.billing);
       const response = result.messages.find((message) => message.type === "response");
       if (response) playAudio(response.text, response.id);
     } catch (error) {
       setIsTyping(false);
+      const quotaBilling = billingFromError(error);
+      if (quotaBilling) {
+        setBilling(quotaBilling);
+        setQuotaNotice("Free chats are used today. Pro is coming soon.");
+        return;
+      }
       setMessages((prev) => [...prev, {
         id: nanoid(),
         role: "model",
@@ -174,6 +204,7 @@ export default function App() {
     await api.logout();
     setUser(null);
     setMessages([]);
+    setBilling(null);
   };
 
   if (!isAuthReady) {
@@ -185,6 +216,7 @@ export default function App() {
   }
 
   const HinaHeaderIcon = theme === "dark" ? Moon : Sun;
+  const quotaExhausted = billing?.remainingToday === 0;
 
   return (
     <div className={`flex flex-col h-screen font-sans transition-colors duration-300 ${theme} bg-[#FDFBF7] dark:bg-[#1c1224] text-[#4A4A4A] dark:text-[#e5dceb] selection:bg-[#FFD166]/30`}>
@@ -251,24 +283,41 @@ export default function App() {
       </div>
 
       <div className="flex-none bg-white dark:bg-[#1c1224] p-4 sm:p-6 border-t border-[#E8E2D6] dark:border-[#3a2347]">
+        <div className="max-w-3xl mx-auto mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold ${
+            quotaExhausted
+              ? "border-[#E9A8A8] bg-[#FFF0F0] text-[#9F3A3A] dark:border-[#6b2945] dark:bg-[#351827] dark:text-[#ffb7c8]"
+              : "border-[#E8E2D6] bg-[#FDFBF7] text-[#8A817C] dark:border-[#3a2347] dark:bg-[#291a33] dark:text-[#cdb6dd]"
+          }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${quotaExhausted ? "bg-[#E76F51]" : "bg-[#06D6A0]"}`} />
+            {billingLabel(billing)}
+          </div>
+          {quotaNotice && (
+            <span className="text-[#9F3A3A] dark:text-[#ffb7c8] font-medium">{quotaNotice}</span>
+          )}
+        </div>
         <div className="max-w-3xl mx-auto relative flex items-center bg-[#F7F2E9] dark:bg-[#291a33] rounded-[32px] p-2 pr-2 ring-1 ring-[#E8E2D6] dark:ring-[#3a2347] shadow-inner focus-within:ring-2 focus-within:ring-[#B5A48B]">
           <textarea
             value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+              if (!quotaExhausted) setQuotaNotice(null);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 handleSend();
               }
             }}
-            placeholder="Reply to Hina in English (or Chinese if you're tired!)"
+            placeholder={quotaExhausted ? "Today's free chats are used. Pro is coming soon." : "Reply to Hina in English (or Chinese if you're tired!)"}
             className="flex-1 max-h-32 min-h-[44px] bg-transparent border-0 resize-none py-3 px-4 focus:outline-none text-[15px] block leading-relaxed placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
             rows={1}
-            disabled={isTyping}
+            disabled={isTyping || quotaExhausted}
           />
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isTyping}
+            disabled={!inputValue.trim() || isTyping || quotaExhausted}
             className="w-11 h-11 shrink-0 ml-2 bg-[#FF9F1C] dark:bg-[#660874] text-white hover:scale-105 transition-transform disabled:bg-[#E8E2D6] dark:disabled:bg-[#301f3b] disabled:text-[#B5A48B] disabled:hover:scale-100 rounded-full flex items-center justify-center shadow-md disabled:shadow-none"
             title="Send"
           >
