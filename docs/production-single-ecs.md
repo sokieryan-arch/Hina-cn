@@ -69,6 +69,12 @@ SMTP_FROM=Hina <no-reply@hina.example.cn>
 
 Production email verification requires SMTP. Phone verification returns `phone_verification_unavailable` until real SMS delivery is implemented.
 
+### Auth readiness
+
+Email registration, login, and password reset are the first production-ready auth path. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` before enabling production email verification.
+
+Phone verification is intentionally unavailable until Volcengine SMS sign name and template approval are complete. WeChat login requires a public HTTPS domain and an approved WeChat Open Platform website application.
+
 ## 5. Install systemd Service
 
 ```bash

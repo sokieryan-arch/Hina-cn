@@ -41,6 +41,12 @@ Health check:
 curl http://localhost:3000/api/health
 ```
 
+### Auth readiness
+
+Email registration, login, and password reset are the first production-ready auth path. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` before enabling production email verification.
+
+Phone verification is intentionally unavailable until Volcengine SMS sign name and template approval are complete. WeChat login requires a public HTTPS domain and an approved WeChat Open Platform website application.
+
 For the current low-cost single-ECS path, use `docs/production-single-ecs.md`.
 Docker and managed-resource Volcengine deployment notes live in `docs/deploy-volcengine.md`.
 Use `.env.production.example` as the production template; never commit `.env` or `.env.production`.

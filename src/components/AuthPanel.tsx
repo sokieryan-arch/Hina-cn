@@ -11,7 +11,7 @@ interface AuthPanelProps {
   onAuthed: (user: CurrentUser) => void;
 }
 
-function readableError(message: string) {
+export function readableError(message: string) {
   const map: Record<string, string> = {
     invalid_credentials: "账号或密码不对。",
     already_registered: "这个账号已经注册过了。",
@@ -19,9 +19,13 @@ function readableError(message: string) {
     weak_password: "密码至少需要 8 位。",
     invalid_phone: "请输入中国大陆手机号。",
     invalid_email: "邮箱格式不太对。",
-    missing_wechat_app_id: "还没有配置微信开放平台 AppID。",
+    user_not_found: "没有找到这个账号。",
+    email_not_configured: "邮箱验证码还没有配置好，请稍后再试。",
+    phone_verification_unavailable: "手机验证码暂未开放，请先使用邮箱注册。",
+    missing_wechat_app_id: "微信登录还没有配置好。",
+    missing_wechat_credentials: "微信登录还没有配置好。",
   };
-  return map[message] ?? message;
+  return map[message] ?? "请求没有成功，请稍后再试。";
 }
 
 export function AuthPanel({ onAuthed }: AuthPanelProps) {
