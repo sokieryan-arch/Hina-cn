@@ -16,6 +16,10 @@ async function startServer() {
 
   const distPath = path.join(process.cwd(), "dist");
   const indexPath = path.join(distPath, "index.html");
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads"), {
+    immutable: true,
+    maxAge: "7d",
+  }));
   if (fs.existsSync(indexPath)) {
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {

@@ -133,16 +133,17 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           );
         },
         async updateProfile(userId, patch) {
+          const hasAvatarPatch = Object.prototype.hasOwnProperty.call(patch, "avatarUrl");
           const result = await pool.query(
             `update users
              set display_name = coalesce($2, display_name),
-                 avatar_url = $3,
+                 avatar_url = case when $3 then $4 else avatar_url end,
                  updated_at = now()
              where id = $1
              returning *, exists(
                select 1 from external_identities e where e.user_id = users.id and e.provider = 'wechat'
              ) as has_wechat`,
-            [userId, patch.displayName ?? null, patch.avatarUrl ?? null],
+            [userId, patch.displayName ?? null, hasAvatarPatch, patch.avatarUrl ?? null],
           );
           return rowToUser(result.rows[0]);
         },

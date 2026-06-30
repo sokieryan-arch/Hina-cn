@@ -51,12 +51,6 @@ function billingFromError(error: unknown): BillingSummary | null {
   return billing ?? null;
 }
 
-function billingLabel(billing: BillingSummary | null) {
-  if (!billing) return "Loading plan...";
-  if (billing.isPro) return "Pro - unlimited chats";
-  return `Free - ${billing.usedToday}/${billing.dailyLimit} chats today`;
-}
-
 export default function App() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -68,7 +62,6 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [proactiveSettings, setProactiveSettings] = useState<ProactiveSettings>(DEFAULT_PROACTIVE_SETTINGS);
   const [billing, setBilling] = useState<BillingSummary | null>(null);
-  const [quotaNotice, setQuotaNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -156,14 +149,9 @@ export default function App() {
 
   const handleSend = async () => {
     if (!inputValue.trim() || isTyping || !user) return;
-    if (billing?.remainingToday === 0) {
-      setQuotaNotice("Free chats are used today. Pro is coming soon.");
-      return;
-    }
 
     const userText = inputValue.trim();
     setInputValue("");
-    setQuotaNotice(null);
     const userMsg: Message = {
       id: nanoid(),
       role: "user",
@@ -187,7 +175,13 @@ export default function App() {
       const quotaBilling = billingFromError(error);
       if (quotaBilling) {
         setBilling(quotaBilling);
-        setQuotaNotice("Free chats are used today. Pro is coming soon.");
+        setMessages((prev) => [...prev, {
+          id: nanoid(),
+          role: "model",
+          text: chatError(error),
+          type: "response",
+          timestamp: Date.now(),
+        }]);
         return;
       }
       setMessages((prev) => [...prev, {
@@ -216,7 +210,6 @@ export default function App() {
   }
 
   const HinaHeaderIcon = theme === "dark" ? Moon : Sun;
-  const quotaExhausted = billing?.remainingToday === 0;
 
   return (
     <div className={`flex flex-col h-screen font-sans transition-colors duration-300 ${theme} bg-[#FDFBF7] dark:bg-[#1c1224] text-[#4A4A4A] dark:text-[#e5dceb] selection:bg-[#FFD166]/30`}>
@@ -283,41 +276,24 @@ export default function App() {
       </div>
 
       <div className="flex-none bg-white dark:bg-[#1c1224] p-4 sm:p-6 border-t border-[#E8E2D6] dark:border-[#3a2347]">
-        <div className="max-w-3xl mx-auto mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold ${
-            quotaExhausted
-              ? "border-[#E9A8A8] bg-[#FFF0F0] text-[#9F3A3A] dark:border-[#6b2945] dark:bg-[#351827] dark:text-[#ffb7c8]"
-              : "border-[#E8E2D6] bg-[#FDFBF7] text-[#8A817C] dark:border-[#3a2347] dark:bg-[#291a33] dark:text-[#cdb6dd]"
-          }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${quotaExhausted ? "bg-[#E76F51]" : "bg-[#06D6A0]"}`} />
-            {billingLabel(billing)}
-          </div>
-          {quotaNotice && (
-            <span className="text-[#9F3A3A] dark:text-[#ffb7c8] font-medium">{quotaNotice}</span>
-          )}
-        </div>
         <div className="max-w-3xl mx-auto relative flex items-center bg-[#F7F2E9] dark:bg-[#291a33] rounded-[32px] p-2 pr-2 ring-1 ring-[#E8E2D6] dark:ring-[#3a2347] shadow-inner focus-within:ring-2 focus-within:ring-[#B5A48B]">
           <textarea
             value={inputValue}
-            onChange={(event) => {
-              setInputValue(event.target.value);
-              if (!quotaExhausted) setQuotaNotice(null);
-            }}
+            onChange={(event) => setInputValue(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 handleSend();
               }
             }}
-            placeholder={quotaExhausted ? "Today's free chats are used. Pro is coming soon." : "Reply to Hina in English (or Chinese if you're tired!)"}
+            placeholder="Reply to Hina in English (or Chinese if you're tired!)"
             className="flex-1 max-h-32 min-h-[44px] bg-transparent border-0 resize-none py-3 px-4 focus:outline-none text-[15px] block leading-relaxed placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
             rows={1}
-            disabled={isTyping || quotaExhausted}
+            disabled={isTyping}
           />
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isTyping || quotaExhausted}
+            disabled={!inputValue.trim() || isTyping}
             className="w-11 h-11 shrink-0 ml-2 bg-[#FF9F1C] dark:bg-[#660874] text-white hover:scale-105 transition-transform disabled:bg-[#E8E2D6] dark:disabled:bg-[#301f3b] disabled:text-[#B5A48B] disabled:hover:scale-100 rounded-full flex items-center justify-center shadow-md disabled:shadow-none"
             title="Send"
           >
@@ -330,7 +306,9 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         user={user}
+        billing={billing}
         onUserChange={setUser}
+        onBillingChange={setBilling}
         onClearHistory={() => setMessages([greeting()])}
         proactiveSettings={proactiveSettings}
         onProactiveSettingsChange={setProactiveSettings}
