@@ -5,3 +5,4 @@ dist
 .env.production
 .env.*.local
 *.log
+uploads/

@@ -13,10 +13,11 @@ export class ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const response = await fetch(path, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(init?.headers ?? {}),
     },
   });
@@ -58,6 +59,14 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(input),
     }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.set("avatar", file);
+    return apiFetch<{ user: CurrentUser }>("/api/profile/avatar", {
+      method: "POST",
+      body: form,
+    });
+  },
   messages: () => apiFetch<{ messages: Message[] }>("/api/messages"),
   clearMessages: () => apiFetch<{ ok: true }>("/api/messages", { method: "DELETE" }),
   billingMe: () => apiFetch<{ billing: BillingSummary }>("/api/billing/me"),

@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
+import path from "node:path";
 import { nanoid } from "nanoid";
 import { normalizeLanguageTips } from "../shared/languageTips.js";
+import { saveAvatarUpload } from "./avatarUpload.js";
 import { canUseChat } from "./billing.js";
 import { clearSessionCookie, getSessionToken, setSessionCookie } from "./cookies.js";
 import { buildHealthStatus } from "./health.js";
@@ -21,6 +23,7 @@ interface ApiDependencies {
   speech: SpeechProvider;
   chatLimiter: ReturnType<typeof createRateLimiter>;
   ttsLimiter: ReturnType<typeof createRateLimiter>;
+  uploadsRoot?: string;
   healthChecks?: {
     database?: () => Promise<{ ok: boolean; error?: string }>;
     redis?: () => Promise<{ ok: boolean; error?: string }>;
@@ -208,10 +211,31 @@ export function registerApiRoutes(deps: ApiDependencies) {
   app.put("/api/profile", async (req, res) => {
     try {
       const user = await requireUser(req, deps);
-      const updated = await store.auth.users.updateProfile(user.id, {
+      const patch: { displayName?: string; avatarUrl?: string | null } = {
         displayName: typeof req.body?.displayName === "string" ? req.body.displayName : undefined,
-        avatarUrl: typeof req.body?.avatarUrl === "string" ? req.body.avatarUrl : null,
+      };
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "avatarUrl")) {
+        patch.avatarUrl = typeof req.body?.avatarUrl === "string" && req.body.avatarUrl.trim()
+          ? req.body.avatarUrl.trim()
+          : null;
+      }
+      const updated = await store.auth.users.updateProfile(user.id, patch);
+      const refreshed = await auth.createSessionForUser(updated);
+      setSessionCookie(res, refreshed.session.token, refreshed.session.expiresAt);
+      res.json({ user: refreshed.user });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/profile/avatar", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const avatarUrl = await saveAvatarUpload(req, {
+        userId: user.id,
+        uploadsRoot: deps.uploadsRoot ?? path.join(process.cwd(), "uploads"),
       });
+      const updated = await store.auth.users.updateProfile(user.id, { avatarUrl });
       const refreshed = await auth.createSessionForUser(updated);
       setSessionCookie(res, refreshed.session.token, refreshed.session.expiresAt);
       res.json({ user: refreshed.user });
