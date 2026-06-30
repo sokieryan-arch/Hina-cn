@@ -4,8 +4,11 @@ import {
   Bell,
   CheckCircle2,
   Clock,
+  Coffee,
   Crown,
+  Heart,
   Image as ImageIcon,
+  QrCode,
   Settings,
   Sparkles,
   Trash2,
@@ -76,6 +79,7 @@ export function SettingsModal({
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [coffeeMethod, setCoffeeMethod] = useState<"wechat" | "alipay" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,6 +90,7 @@ export function SettingsModal({
     setTopicText(proactiveSettings.favoriteTopics.join(", "));
     setProfileMessage(null);
     setBillingMessage(null);
+    setCoffeeMethod(null);
   }, [isOpen, proactiveSettings.favoriteTopics, user.avatarUrl, user.displayName]);
 
   useEffect(() => () => {
@@ -309,6 +314,85 @@ export function SettingsModal({
                   </button>
                   {billingMessage && (
                     <p className="text-xs font-medium text-[#47625b] dark:text-[#b6d5e8]">{billingMessage}</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="overflow-hidden rounded-2xl border border-[#F2D7B6] dark:border-[#5a3652] bg-[#FFF8EC] dark:bg-[#261829]">
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#FFD166] text-[#2D2D2D] flex items-center justify-center shadow-sm">
+                      <Coffee size={22} />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#A26125] dark:text-[#f4bfda]">Tiny support jar</p>
+                      <h3 className="text-lg font-bold text-[#2D2D2D] dark:text-white">Buy Hina a cup of coffee</h3>
+                      <p className="text-sm leading-relaxed text-[#7B5E3C] dark:text-[#e6cfe5]">
+                        A tiny coffee helps cover server hosting and maintenance so Hina can keep popping in. This is a voluntary support tip, not a Pro subscription.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setCoffeeMethod((current) => current === "wechat" ? null : "wechat")}
+                      className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all ${
+                        coffeeMethod === "wechat"
+                          ? "border-[#07C160] bg-[#E9F8EF] text-[#115B31] dark:bg-[#102c22] dark:text-[#bdf1d3]"
+                          : "border-[#E8E2D6] bg-white text-[#2D2D2D] hover:border-[#F2C48D] dark:border-[#3a2347] dark:bg-[#1c1224] dark:text-white"
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-2 text-sm font-bold">
+                        <QrCode size={16} />
+                        WeChat
+                      </span>
+                      <span className="text-xs font-bold">{coffeeMethod === "wechat" ? "Hide" : "Show"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCoffeeMethod((current) => current === "alipay" ? null : "alipay")}
+                      className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all ${
+                        coffeeMethod === "alipay"
+                          ? "border-[#1677FF] bg-[#EAF3FF] text-[#0F4F9E] dark:bg-[#10213a] dark:text-[#c8e0ff]"
+                          : "border-[#E8E2D6] bg-white text-[#2D2D2D] hover:border-[#F2C48D] dark:border-[#3a2347] dark:bg-[#1c1224] dark:text-white"
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-2 text-sm font-bold">
+                        <Heart size={16} />
+                        Alipay
+                      </span>
+                      <span className="text-xs font-bold">{coffeeMethod === "alipay" ? "Hide" : "Show"}</span>
+                    </button>
+                  </div>
+
+                  {coffeeMethod ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl bg-white dark:bg-[#1c1224] border border-[#E8E2D6] dark:border-[#3a2347] p-3 shadow-sm"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-2 text-sm font-bold text-[#2D2D2D] dark:text-white">
+                          {coffeeMethod === "wechat" ? <QrCode size={16} /> : <Heart size={16} />}
+                          {coffeeMethod === "wechat" ? "WeChat coffee QR" : "Alipay coffee QR"}
+                        </span>
+                        <span className="rounded-full bg-[#FFF3D1] px-2 py-1 text-[11px] font-bold text-[#8A5D08]">Thank you</span>
+                      </div>
+                      <img
+                        src={coffeeMethod === "wechat" ? "/support/wechat-coffee.png" : "/support/alipay-coffee.jpg"}
+                        alt={coffeeMethod === "wechat" ? "WeChat support QR code" : "Alipay support QR code"}
+                        className={`mx-auto max-h-[420px] w-full rounded-xl object-contain ${
+                          coffeeMethod === "wechat" ? "bg-[#07C160]" : "bg-[#1677FF]"
+                        }`}
+                        loading="lazy"
+                      />
+                    </motion.div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-[#E3C7A5] dark:border-[#553852] px-4 py-3 text-sm font-medium text-[#8A6A43] dark:text-[#d8bddc]">
+                      Choose WeChat or Alipay to reveal a QR code.
+                    </div>
                   )}
                 </div>
               </section>
