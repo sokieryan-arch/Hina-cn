@@ -2,6 +2,7 @@ import { createAuthService } from "./auth/authService.js";
 import { createWeChatOAuth } from "./auth/wechat.js";
 import { createRedisVerificationStore } from "./cache/redisVerificationStore.js";
 import { validateRuntimeEnv } from "./config.js";
+import { getRuntimeEnvironment } from "./runtimeEnv.js";
 import { createCompositeNotifier } from "./notifiers.js";
 import { createRateLimiter } from "./rateLimit.js";
 import { DemoLanguagePartnerProvider } from "./providers/demoProvider.js";
@@ -32,7 +33,7 @@ function createProvider(): LanguagePartnerProvider & SpeechProvider {
     return new VolcengineArkProvider();
   }
 
-  if (process.env.NODE_ENV === "production") {
+  if (getRuntimeEnvironment().isDeployed) {
     return new VolcengineArkProvider();
   }
 

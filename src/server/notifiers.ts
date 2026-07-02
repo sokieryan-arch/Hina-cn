@@ -1,11 +1,13 @@
 import nodemailer from "nodemailer";
 import type { ParsedIdentifier, VerificationPurpose } from "./auth/types.js";
+import { getRuntimeEnvironment } from "./runtimeEnv.js";
 
 export interface VerificationNotifier {
   sendCode(target: ParsedIdentifier, code: string, purpose: VerificationPurpose): Promise<void>;
 }
 
 interface NotifierEnv {
+  APP_ENV?: string;
   NODE_ENV?: string;
   SMTP_HOST?: string;
   SMTP_PORT?: string;
@@ -54,13 +56,13 @@ function serviceUnavailable(message: string) {
 
 export function getEmailHealth(env: NotifierEnv = process.env) {
   const configured = hasSmtpConfig(env);
-  const isProduction = env.NODE_ENV === "production";
+  const runtimeEnv = getRuntimeEnvironment(env);
   return configured
     ? { configured: true, ok: true }
     : {
       configured: false,
-      ok: !isProduction,
-      error: isProduction ? "SMTP_HOST, SMTP_USER, and SMTP_PASS are required for production email verification." : undefined,
+      ok: !runtimeEnv.isDeployed,
+      error: runtimeEnv.isDeployed ? "SMTP_HOST, SMTP_USER, and SMTP_PASS are required for deployed email verification." : undefined,
     };
 }
 
@@ -108,6 +110,7 @@ export function createVolcengineSmsNotifier(): VerificationNotifier | null {
 
 export function createCompositeNotifier(options: CompositeNotifierOptions = {}): VerificationNotifier {
   const env = options.env ?? process.env;
+  const runtimeEnv = getRuntimeEnvironment(env);
   const smtp = options.smtpNotifier !== undefined ? options.smtpNotifier : createSmtpNotifier({ env });
   const sms = options.smsNotifier !== undefined ? options.smsNotifier : createVolcengineSmsNotifier();
   const fallback = options.fallbackNotifier ?? createConsoleNotifier();
@@ -116,13 +119,13 @@ export function createCompositeNotifier(options: CompositeNotifierOptions = {}):
     async sendCode(target, code, purpose) {
       if (target.kind === "email") {
         if (smtp) return smtp.sendCode(target, code, purpose);
-        if (env.NODE_ENV === "production") throw serviceUnavailable("email_not_configured");
+        if (runtimeEnv.isDeployed) throw serviceUnavailable("email_not_configured");
         return fallback.sendCode(target, code, purpose);
       }
 
       if (target.kind === "phone") {
         if (sms) return sms.sendCode(target, code, purpose);
-        if (env.NODE_ENV === "production") throw serviceUnavailable("phone_verification_unavailable");
+        if (runtimeEnv.isDeployed) throw serviceUnavailable("phone_verification_unavailable");
         return fallback.sendCode(target, code, purpose);
       }
 

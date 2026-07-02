@@ -127,3 +127,37 @@ test("hides development code for email when SMTP is configured", async () => {
     }
   }
 });
+
+test("hides development code in staging even when using a fallback notifier", async () => {
+  const originalEnv = {
+    APP_ENV: process.env.APP_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+  };
+  process.env.APP_ENV = "staging";
+  process.env.NODE_ENV = "development";
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
+
+  try {
+    const stores = createMemoryAuthStores();
+    const auth = createAuthService({
+      stores,
+      codeGenerator: () => "123456",
+      now: () => new Date("2026-06-09T08:00:00Z"),
+      notifier: { sendCode: async () => undefined },
+    });
+
+    const result = await auth.sendCode({ target: "sokie@example.com", purpose: "register" });
+
+    assert.equal(result.devCode, undefined);
+  } finally {
+    for (const [key, value] of Object.entries(originalEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});

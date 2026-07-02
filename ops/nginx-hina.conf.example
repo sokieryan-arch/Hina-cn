@@ -1,5 +1,6 @@
 # Replace hina.example.cn with the real ICP-filed domain before enabling this.
-# This configuration expects Hina to listen on 127.0.0.1:3000 through systemd.
+# This server block can coexist with another default site on the same ECS.
+# It expects Hina to listen on 127.0.0.1:3000 through systemd.
 
 server {
   listen 80;
@@ -23,7 +24,8 @@ server {
   ssl_certificate /etc/letsencrypt/live/hina.example.cn/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/hina.example.cn/privkey.pem;
 
-  client_max_body_size 2m;
+  # Avatar uploads are limited to 10MB in the application.
+  client_max_body_size 12m;
 
   location / {
     proxy_pass http://127.0.0.1:3000;
@@ -32,5 +34,7 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
   }
 }

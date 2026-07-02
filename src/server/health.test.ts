@@ -28,6 +28,7 @@ test("reports memory-mode development health without exposing secrets", async ()
 test("reports production database and redis check failures without secret values", async () => {
   const health = await buildHealthStatus({
     env: {
+      APP_ENV: "production",
       NODE_ENV: "production",
       DATABASE_URL: "postgres://secret-user:secret-pass@db.example.cn/hina",
       REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",
@@ -51,9 +52,30 @@ test("reports production database and redis check failures without secret values
   assert.equal(serialized.includes("ark-secret-value"), false);
 });
 
+test("reports staging as deployed without development fallbacks", async () => {
+  const health = await buildHealthStatus({
+    env: {
+      APP_ENV: "staging",
+      NODE_ENV: "development",
+      DATABASE_URL: "",
+      REDIS_URL: "",
+      ARK_API_KEY: "",
+      ARK_CHAT_MODEL: "",
+    },
+    uptimeSeconds: () => 9,
+  });
+
+  assert.equal(health.env, "staging");
+  assert.equal(health.ok, false);
+  assert.equal(health.database.ok, false);
+  assert.equal(health.model.ok, false);
+  assert.equal(health.email.ok, false);
+});
+
 test("reports email configuration status without secret values", async () => {
   const missingEmail = await buildHealthStatus({
     env: {
+      APP_ENV: "production",
       NODE_ENV: "production",
       DATABASE_URL: "postgres://user:secret-pass@db.example.cn/hina",
       REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",
@@ -70,6 +92,7 @@ test("reports email configuration status without secret values", async () => {
 
   const configuredEmail = await buildHealthStatus({
     env: {
+      APP_ENV: "production",
       NODE_ENV: "production",
       DATABASE_URL: "postgres://user:secret-pass@db.example.cn/hina",
       REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",

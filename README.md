@@ -49,6 +49,6 @@ Phone verification is intentionally unavailable until Volcengine SMS sign name a
 
 For the current low-cost single-ECS path, use `docs/production-single-ecs.md`.
 Docker and managed-resource Volcengine deployment notes live in `docs/deploy-volcengine.md`.
-Use `.env.production.example` as the production template; never commit `.env` or `.env.production`.
+Use `.env.staging.example` for public-IP staging and `.env.production.example` for real HTTPS production; never commit `.env`, `.env.staging`, or `.env.production`.
 
-Important: production mode expects a real HTTPS domain. For temporary bare public-IP testing, keep `NODE_ENV=development` in `.env`.
+Important: `APP_ENV` controls Hina's product/runtime strictness, while `NODE_ENV` controls Node/browser behavior such as secure cookies. For temporary bare public-IP testing, use `APP_ENV=staging` with `NODE_ENV=development`; for real HTTPS production, use `APP_ENV=production` with `NODE_ENV=production`.

@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { getRuntimeEnvironment } from "../runtimeEnv.js";
 import { parseIdentifier, publicMaskedIdentifier } from "./identifiers.js";
 import type {
   AuthStores,
@@ -48,7 +49,8 @@ function hasSmtpConfig() {
 }
 
 function shouldExposeDevCode(identifier: ParsedIdentifier) {
-  if (process.env.NODE_ENV === "production") return false;
+  const runtimeEnv = getRuntimeEnvironment();
+  if (!runtimeEnv.isDevelopment) return false;
   if (identifier.kind === "email" && hasSmtpConfig()) return false;
   return true;
 }

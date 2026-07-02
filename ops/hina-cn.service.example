@@ -7,7 +7,7 @@ Wants=postgresql.service redis-server.service
 Type=simple
 User=root
 WorkingDirectory=/opt/Hina-cn
-# For temporary public-IP HTTP testing, change this to /opt/Hina-cn/.env.
+# For public-IP staging, change this to /opt/Hina-cn/.env.
 # For real production behind HTTPS, keep /opt/Hina-cn/.env.production.
 EnvironmentFile=/opt/Hina-cn/.env.production
 ExecStart=/usr/local/bin/node /opt/Hina-cn/dist/server.cjs

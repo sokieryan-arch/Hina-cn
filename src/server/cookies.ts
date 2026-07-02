@@ -1,5 +1,6 @@
 import { parse, serialize } from "cookie";
 import type { Request, Response } from "express";
+import { shouldUseSecureCookies } from "./runtimeEnv.js";
 
 export const SESSION_COOKIE = "hina_session";
 
@@ -18,7 +19,7 @@ export function setSessionCookie(res: Response, token: string, expiresAt: string
   res.setHeader("Set-Cookie", serialize(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     path: "/",
     expires: new Date(expiresAt),
   }));
@@ -28,7 +29,7 @@ export function clearSessionCookie(res: Response) {
   res.setHeader("Set-Cookie", serialize(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     path: "/",
     expires: new Date(0),
   }));

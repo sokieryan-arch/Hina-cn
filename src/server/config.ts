@@ -1,7 +1,13 @@
+import { getRuntimeEnvironment } from "./runtimeEnv.js";
+
 export interface RuntimeConfig {
   nodeEnv: string;
+  appEnv: string;
   isProduction: boolean;
+  isStaging: boolean;
+  isDeployed: boolean;
   missingProductionKeys: string[];
+  missingDeploymentKeys: string[];
 }
 
 const REQUIRED_PRODUCTION_KEYS = [
@@ -21,22 +27,25 @@ function isUnsafeSessionSecret(value: unknown) {
 }
 
 export function validateRuntimeEnv(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
-  const nodeEnv = env.NODE_ENV || "development";
-  const isProduction = nodeEnv === "production";
-  const missingProductionKeys = isProduction
+  const runtimeEnv = getRuntimeEnvironment(env);
+  const missingDeploymentKeys = runtimeEnv.isDeployed
     ? REQUIRED_PRODUCTION_KEYS.filter((key) => {
       if (key === "SESSION_SECRET") return isUnsafeSessionSecret(env[key]);
       return isBlank(env[key]);
     })
     : [];
 
-  if (missingProductionKeys.length > 0) {
-    throw new Error(`Missing required production environment variables: ${missingProductionKeys.join(", ")}`);
+  if (missingDeploymentKeys.length > 0) {
+    throw new Error(`Missing required deployment environment variables: ${missingDeploymentKeys.join(", ")}`);
   }
 
   return {
-    nodeEnv,
-    isProduction,
-    missingProductionKeys,
+    nodeEnv: runtimeEnv.nodeEnv,
+    appEnv: runtimeEnv.appEnv,
+    isProduction: runtimeEnv.isProduction,
+    isStaging: runtimeEnv.isStaging,
+    isDeployed: runtimeEnv.isDeployed,
+    missingProductionKeys: missingDeploymentKeys,
+    missingDeploymentKeys,
   };
 }

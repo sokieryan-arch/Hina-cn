@@ -4,8 +4,8 @@ This runbook is for the low-cost test deployment: one ECS runs Node, PostgreSQL,
 
 ## 1. Deployment Modes
 
-- Temporary public-IP testing: use `.env` with `NODE_ENV=development`. This keeps non-secure cookies working on plain `http://PUBLIC_IP:3000`.
-- Real production: use `.env.production` with `NODE_ENV=production`, a real domain, and HTTPS. Do not use production mode on a bare HTTP public IP because secure cookies will not be sent by the browser.
+- Temporary public-IP staging: use `.env` with `APP_ENV=staging` and `NODE_ENV=development`. This keeps non-secure cookies working on plain `http://PUBLIC_IP:3000`, while disabling development fallbacks such as local verification codes.
+- Real production: use `.env.production` with `APP_ENV=production` and `NODE_ENV=production`, a real domain, and HTTPS. Do not use production mode on a bare HTTP public IP because secure cookies will not be sent by the browser.
 
 ## 2. Prepare The Server
 
@@ -39,9 +39,20 @@ npm run db:migrate
 Keep temporary IP testing in `.env`:
 
 ```bash
+APP_ENV=staging
 NODE_ENV=development
 APP_URL=http://PUBLIC_IP:3000
 PORT=3000
+SESSION_SECRET=...
+DATABASE_URL=postgres://hina_app:DB_PASS@127.0.0.1:5432/hina_cn
+REDIS_URL=redis://:REDIS_PASS@127.0.0.1:6379
+ARK_API_KEY=...
+ARK_CHAT_MODEL=...
+SMTP_HOST=smtp.qq.com
+SMTP_PORT=465
+SMTP_USER=hina-cn@foxmail.com
+SMTP_PASS=...
+SMTP_FROM=Hina <hina-cn@foxmail.com>
 ```
 
 Create production config only after a domain and HTTPS are ready:
@@ -54,6 +65,7 @@ openssl rand -hex 32
 Fill `.env.production` with:
 
 ```bash
+APP_ENV=production
 NODE_ENV=production
 APP_URL=https://hina.example.cn
 SESSION_SECRET=...
@@ -79,7 +91,7 @@ Phone verification is intentionally unavailable until Volcengine SMS sign name a
 
 ```bash
 cp ops/hina-cn.service.example /etc/systemd/system/hina-cn.service
-# For temporary public-IP HTTP testing, edit the service file and use:
+# For temporary public-IP staging, edit the service file and use:
 # EnvironmentFile=/opt/Hina-cn/.env
 systemctl daemon-reload
 systemctl enable --now hina-cn
@@ -101,14 +113,20 @@ After buying a domain, completing ICP filing, and pointing DNS to the ECS public
 
 ```bash
 cp ops/nginx-hina.conf.example /etc/nginx/sites-available/hina-cn
+sed -i 's/hina.example.cn/YOUR_DOMAIN/g' /etc/nginx/sites-available/hina-cn
 ln -sf /etc/nginx/sites-available/hina-cn /etc/nginx/sites-enabled/hina-cn
 nginx -t
 systemctl reload nginx
 ```
 
-Install certificates with your preferred ACME tool, then update the `server_name` and certificate paths in the Nginx config. After HTTPS works, switch systemd to `.env.production` and restart:
+Install certificates with your preferred ACME tool, then update the `server_name` and certificate paths in the Nginx config if your tool does not do it automatically. Certbot's official instructions are at <https://certbot.eff.org/instructions>. After HTTPS works, switch systemd to `.env.production` and restart:
 
 ```bash
+cp .env.staging.example .env.production
+# Edit APP_URL, APP_ENV, NODE_ENV, domain email, and secrets.
+nano .env.production
+sed -i 's#EnvironmentFile=/opt/Hina-cn/.env#EnvironmentFile=/opt/Hina-cn/.env.production#' /etc/systemd/system/hina-cn.service
+systemctl daemon-reload
 systemctl restart hina-cn
 curl -s https://hina.example.cn/api/health
 ```

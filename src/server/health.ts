@@ -1,6 +1,8 @@
 import { getEmailHealth } from "./notifiers.js";
+import { getRuntimeEnvironment } from "./runtimeEnv.js";
 
 interface HealthEnv {
+  APP_ENV?: string;
   NODE_ENV?: string;
   DATABASE_URL?: string;
   REDIS_URL?: string;
@@ -48,13 +50,18 @@ async function runCheck(check?: () => Promise<CheckResult>): Promise<CheckResult
 
 export async function buildHealthStatus(options: HealthOptions = {}) {
   const env = options.env ?? process.env;
-  const isProduction = env.NODE_ENV === "production";
+  const runtimeEnv = getRuntimeEnvironment(env);
   const hasDatabase = Boolean(env.DATABASE_URL);
   const hasRedis = Boolean(env.REDIS_URL);
   const hasArk = Boolean(env.ARK_API_KEY && env.ARK_CHAT_MODEL);
   const database = hasDatabase
     ? { mode: "postgres" as const, configured: true, ...(await runCheck(options.checks?.database)) }
-    : { mode: "memory" as const, configured: false, ok: !isProduction, error: isProduction ? "DATABASE_URL is required in production." : undefined };
+    : {
+      mode: "memory" as const,
+      configured: false,
+      ok: !runtimeEnv.isDeployed,
+      error: runtimeEnv.isDeployed ? "DATABASE_URL is required in deployed environments." : undefined,
+    };
   const redis = hasRedis
     ? { mode: "redis" as const, configured: true, ...(await runCheck(options.checks?.redis)) }
     : { mode: "memory" as const, configured: false, ok: true };
@@ -63,14 +70,15 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
     : {
       provider: "demo" as const,
       configured: false,
-      ok: !isProduction,
+      ok: !runtimeEnv.isDeployed,
       missing: ["ARK_API_KEY", "ARK_CHAT_MODEL"].filter((key) => !env[key as keyof HealthEnv]),
     };
   const email = getEmailHealth(env);
 
   return {
     ok: database.ok && redis.ok && model.ok && email.ok,
-    env: env.NODE_ENV || "development",
+    env: runtimeEnv.appEnv,
+    nodeEnv: runtimeEnv.nodeEnv,
     uptimeSeconds: Math.floor(options.uptimeSeconds?.() ?? process.uptime()),
     database,
     redis,

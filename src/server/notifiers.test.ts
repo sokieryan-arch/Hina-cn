@@ -7,7 +7,7 @@ const phoneTarget = { kind: "phone" as const, value: "+8613812345678" };
 
 test("production email verification fails clearly when SMTP is not configured", async () => {
   const notifier = createCompositeNotifier({
-    env: { NODE_ENV: "production" },
+    env: { APP_ENV: "production", NODE_ENV: "production" },
     fallbackNotifier: { sendCode: async () => undefined },
   });
 
@@ -20,6 +20,7 @@ test("production email verification fails clearly when SMTP is not configured", 
 test("production phone verification is unavailable until real SMS is implemented", async () => {
   const notifier = createCompositeNotifier({
     env: {
+      APP_ENV: "production",
       NODE_ENV: "production",
       VOLCENGINE_SMS_ACCESS_KEY_ID: "sms-key",
       VOLCENGINE_SMS_SECRET_ACCESS_KEY: "sms-secret",
@@ -30,6 +31,18 @@ test("production phone verification is unavailable until real SMS is implemented
   await assert.rejects(
     notifier.sendCode(phoneTarget, "123456", "register"),
     /phone_verification_unavailable/,
+  );
+});
+
+test("staging email verification does not fall back to console codes", async () => {
+  const notifier = createCompositeNotifier({
+    env: { APP_ENV: "staging", NODE_ENV: "development" },
+    fallbackNotifier: { sendCode: async () => undefined },
+  });
+
+  await assert.rejects(
+    notifier.sendCode(emailTarget, "123456", "register"),
+    /email_not_configured/,
   );
 });
 

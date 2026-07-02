@@ -22,6 +22,7 @@ cp .env.production.example .env.production
 Fill these before starting production:
 
 ```bash
+APP_ENV=production
 NODE_ENV=production
 SESSION_SECRET=...
 DATABASE_URL=...
@@ -37,6 +38,8 @@ SMTP_FROM=Hina <no-reply@your-domain.example.cn>
 ```
 
 Never commit `.env.production`.
+
+For public-IP staging before a real HTTPS domain is ready, use `.env.staging.example` as the template instead. Keep `APP_ENV=staging` and `NODE_ENV=development` so cookies work on HTTP while Hina still disables development fallbacks.
 
 ## 3. Build And Migrate
 
