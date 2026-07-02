@@ -95,3 +95,35 @@ test("surfaces production notifier failures instead of pretending a code was sen
     /email_not_configured/,
   );
 });
+
+test("hides development code for email when SMTP is configured", async () => {
+  const originalEnv = {
+    NODE_ENV: process.env.NODE_ENV,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+  };
+  process.env.NODE_ENV = "development";
+  process.env.SMTP_HOST = "smtp.qq.com";
+  process.env.SMTP_USER = "sokie@qq.com";
+  process.env.SMTP_PASS = "smtp-secret";
+
+  try {
+    const stores = createMemoryAuthStores();
+    const auth = createAuthService({
+      stores,
+      codeGenerator: () => "123456",
+      now: () => new Date("2026-06-09T08:00:00Z"),
+      notifier: { sendCode: async () => undefined },
+    });
+
+    const result = await auth.sendCode({ target: "sokie@example.com", purpose: "register" });
+
+    assert.equal(result.devCode, undefined);
+  } finally {
+    for (const [key, value] of Object.entries(originalEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});

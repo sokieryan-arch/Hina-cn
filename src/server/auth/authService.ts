@@ -43,6 +43,16 @@ function ensurePassword(password: string) {
   if (password.length < 8) throw new Error("weak_password");
 }
 
+function hasSmtpConfig() {
+  return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+}
+
+function shouldExposeDevCode(identifier: ParsedIdentifier) {
+  if (process.env.NODE_ENV === "production") return false;
+  if (identifier.kind === "email" && hasSmtpConfig()) return false;
+  return true;
+}
+
 async function createSession(stores: AuthStores, user: UserRecord, now: Date, ttlDays: number) {
   const session = await stores.sessions.create(user.id, addDays(now, ttlDays));
   return {
@@ -86,7 +96,7 @@ export function createAuthService(options: AuthServiceOptions) {
         channel: identifier.kind,
         maskedTarget: publicMaskedIdentifier(identifier),
         expiresAt: expiresAt.toISOString(),
-        devCode: process.env.NODE_ENV === "production" ? undefined : code,
+        devCode: shouldExposeDevCode(identifier) ? code : undefined,
       };
     },
 
