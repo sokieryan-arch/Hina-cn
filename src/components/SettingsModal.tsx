@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { BillingSummary, CurrentUser, ProactiveSettings } from "../shared/types.js";
 import { ApiError, api } from "../api/client.js";
+import { withAppBase } from "../lib/appPath.js";
 
 const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -217,7 +218,7 @@ export function SettingsModal({
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-[#F7F2E9] dark:bg-[#291a33] border border-[#E8E2D6] dark:border-[#3a2347] overflow-hidden shadow-sm flex items-center justify-center text-[#B5A48B]">
                     {avatarPreview ? (
-                      <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                      <img src={withAppBase(avatarPreview)} alt="Avatar preview" className="w-full h-full object-cover" />
                     ) : (
                       <User size={30} />
                     )}
@@ -381,7 +382,7 @@ export function SettingsModal({
                         <span className="rounded-full bg-[#FFF3D1] px-2 py-1 text-[11px] font-bold text-[#8A5D08]">Thank you</span>
                       </div>
                       <img
-                        src={coffeeMethod === "wechat" ? "/support/wechat-coffee.png" : "/support/alipay-coffee.jpg"}
+                        src={withAppBase(coffeeMethod === "wechat" ? "/support/wechat-coffee.png" : "/support/alipay-coffee.jpg")}
                         alt={coffeeMethod === "wechat" ? "WeChat support QR code" : "Alipay support QR code"}
                         className={`mx-auto max-h-[420px] w-full rounded-xl object-contain ${
                           coffeeMethod === "wechat" ? "bg-[#07C160]" : "bg-[#1677FF]"

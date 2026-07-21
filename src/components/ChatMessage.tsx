@@ -2,6 +2,7 @@ import { CheckCircle2, Lightbulb, MessageCircle, Moon, Sun, UserCircle, Volume2 
 import { motion } from "motion/react";
 import type { Message } from "../shared/types.js";
 import { cn } from "../lib/utils.js";
+import { withAppBase } from "../lib/appPath.js";
 
 interface ChatMessageProps {
   message: Message;
@@ -64,7 +65,7 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, th
       <div className="flex-shrink-0">
         {isUser ? (
           <div className="w-10 h-10 rounded-full bg-[#5A5A40] dark:bg-[#48285c] flex items-center justify-center text-white shadow-sm overflow-hidden">
-            {userPhotoUrl ? <img src={userPhotoUrl} alt="User" className="w-full h-full object-cover" /> : <UserCircle size={22} />}
+            {userPhotoUrl ? <img src={withAppBase(userPhotoUrl)} alt="User" className="w-full h-full object-cover" /> : <UserCircle size={22} />}
           </div>
         ) : (
           <motion.div

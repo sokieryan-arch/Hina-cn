@@ -1,4 +1,5 @@
 import type { BillingSummary, CurrentUser, Message, ProactiveSettings } from "../shared/types.js";
+import { withAppBase } from "../lib/appPath.js";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -14,7 +15,7 @@ export class ApiError extends Error {
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
-  const response = await fetch(path, {
+  const response = await fetch(withAppBase(path), {
     ...init,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
