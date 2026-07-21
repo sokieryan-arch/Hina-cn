@@ -7,6 +7,7 @@ import { AppHeader, type AppView } from "./components/AppHeader.js";
 import { AuthPanel } from "./components/AuthPanel.js";
 import { ChatMessage } from "./components/ChatMessage.js";
 import { SettingsModal } from "./components/SettingsModal.js";
+import { pickChatPlaceholder } from "./i18n/chatPlaceholder.js";
 import { ambientPresence, resolvePresence } from "./lib/presence.js";
 import type { BillingSummary, CurrentUser, Message, ProactiveSettings, WishlistSuggestion } from "./shared/types.js";
 
@@ -63,6 +64,7 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [chatPlaceholder] = useState(() => pickChatPlaceholder());
   const [activity, setActivity] = useState<"ambient" | "preparing" | "thinking">("ambient");
   const [ambient, setAmbient] = useState(() => ambientPresence());
   const [theme, setTheme] = useState<"light" | "dark">(() => loadTheme());
@@ -290,7 +292,7 @@ export default function App() {
           </div>
 
           <div className="flex-none bg-white dark:bg-[#1c1224] p-4 sm:p-6 border-t border-[#E8E2D6] dark:border-[#3a2347]">
-            <div className="max-w-3xl mx-auto relative flex items-center bg-[#F7F2E9] dark:bg-[#291a33] rounded-[32px] p-2 pr-2 ring-1 ring-[#E8E2D6] dark:ring-[#3a2347] shadow-inner focus-within:ring-2 focus-within:ring-[#B5A48B]">
+            <div className="max-w-3xl mx-auto relative flex items-center bg-[#F7F2E9] dark:bg-[#291a33] rounded-[28px] p-1.5 ring-1 ring-[#E8E2D6] dark:ring-[#3a2347] shadow-inner focus-within:ring-2 focus-within:ring-[#B5A48B]" data-chat-composer>
               <textarea
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
@@ -300,8 +302,9 @@ export default function App() {
                     void handleSend();
                   }
                 }}
-                placeholder="Reply to Hina in English (or Chinese if you're tired!)"
-                className="flex-1 max-h-32 min-h-[44px] bg-transparent border-0 resize-none py-3 px-4 focus:outline-none text-[15px] block leading-relaxed placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
+                placeholder={chatPlaceholder}
+                aria-label="Message Hina"
+                className="flex-1 h-10 min-h-10 max-h-10 overflow-y-auto bg-transparent border-0 resize-none py-2.5 px-4 focus:outline-none text-[15px] leading-5 placeholder:whitespace-nowrap placeholder:text-[14px] placeholder:transition-opacity focus:placeholder:opacity-0 placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
                 rows={1}
                 disabled={isGenerating}
               />
@@ -309,7 +312,7 @@ export default function App() {
                 type="button"
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isGenerating}
-                className="w-11 h-11 shrink-0 ml-2 bg-[#FF9F1C] dark:bg-[#660874] text-white hover:scale-105 transition-transform disabled:bg-[#E8E2D6] dark:disabled:bg-[#301f3b] disabled:text-[#B5A48B] disabled:hover:scale-100 rounded-full flex items-center justify-center shadow-md disabled:shadow-none"
+                className="w-10 h-10 shrink-0 ml-1.5 bg-[#FF9F1C] dark:bg-[#660874] text-white hover:scale-105 transition-transform disabled:bg-[#E8E2D6] dark:disabled:bg-[#301f3b] disabled:text-[#B5A48B] disabled:hover:scale-100 rounded-full flex items-center justify-center shadow-md disabled:shadow-none"
                 title="Send"
               >
                 <Send size={18} className="-ml-0.5" />
