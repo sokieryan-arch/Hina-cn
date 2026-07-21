@@ -272,13 +272,13 @@ export default function App() {
                   <ChatMessage message={{ id: "typing", role: "model", text: "", timestamp: Date.now(), isTyping: true }} theme={theme} />
                 )}
                 {wishlistSuggestion && (
-                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-16 mb-6 max-w-[650px] border-l-2 border-[#FFD166] bg-[#FFF9E9] dark:bg-[#2d2136] px-4 py-3">
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="ml-16 mb-6 max-w-[650px] rounded-[20px] border border-[#F0DDA9] bg-[#FFF9E9] dark:border-[#4b3a55] dark:bg-[#2d2136] px-4 py-3 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-[#A27622] dark:text-[#e0c47b]">A tiny idea for our list</p>
                         <p className="mt-1 text-sm font-semibold text-[#4A443E] dark:text-white">{wishlistSuggestion.title}</p>
                         {wishlistSuggestion.details && <p className="mt-1 text-xs leading-5 text-[#7C746F] dark:text-[#b9a8c5]">{wishlistSuggestion.details}</p>}
-                        <button type="button" onClick={acceptWishlistSuggestion} className="mt-3 rounded-lg bg-[#5A5A40] dark:bg-[#48285c] px-3 py-2 text-xs font-bold text-white">Add to Wishlist</button>
+                        <button type="button" onClick={acceptWishlistSuggestion} className="mt-3 rounded-full bg-[#5A5A40] dark:bg-[#48285c] px-4 py-2 text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5">Add to Wishlist</button>
                       </div>
                       <button type="button" onClick={() => setWishlistSuggestion(null)} className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-[#8A817C] hover:bg-black/5 dark:hover:bg-white/10" title="Not now"><X size={15} /></button>
                     </div>

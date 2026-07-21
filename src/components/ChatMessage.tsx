@@ -29,7 +29,7 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, th
         >
           <ThemeAvatarIcon size={24} strokeWidth={2.5} />
         </div>
-        <div className="bg-white dark:bg-[#291a33] p-4 rounded-2xl rounded-tl-none shadow-sm border border-[#F0EADF] dark:border-[#3a2347]">
+        <div className="bg-white dark:bg-[#291a33] p-4 rounded-[22px] rounded-tl-lg shadow-sm border border-[#F0EADF] dark:border-[#3a2347]">
           <div className="flex space-x-1.5 h-6 items-center px-1">
             {[0, 0.2, 0.4].map((delay) => (
               <motion.div
@@ -45,14 +45,14 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, th
     );
   }
 
-  let bgClass = "bg-[#5A5A40] dark:bg-[#48285c] text-white p-4 rounded-2xl rounded-tr-none shadow-md";
+  let bgClass = "bg-[#5A5A40] dark:bg-[#48285c] text-white p-4 rounded-[22px] rounded-tr-lg shadow-md";
   if (!isUser) {
     if (isCorrectionTip) {
-      bgClass = "bg-[#FDF2E9] dark:bg-[#3d1928] text-[#93522C] dark:text-[#ffb0ca] p-4 rounded-2xl shadow-sm border border-[#FBD7BB] dark:border-[#6b2542]";
+      bgClass = "bg-[#FDF2E9] dark:bg-[#3d1928] text-[#93522C] dark:text-[#ffb0ca] p-4 rounded-[22px] shadow-sm border border-[#FBD7BB] dark:border-[#6b2542]";
     } else if (isTip) {
-      bgClass = "bg-[#EAF4F2] dark:bg-[#182a45] text-[#2F5D54] dark:text-[#9fc7ff] p-3 rounded-2xl shadow-sm border border-[#C5E1DB] dark:border-[#24426e]";
+      bgClass = "bg-[#EAF4F2] dark:bg-[#182a45] text-[#2F5D54] dark:text-[#9fc7ff] p-3 rounded-[22px] shadow-sm border border-[#C5E1DB] dark:border-[#24426e]";
     } else {
-      bgClass = "bg-white dark:bg-[#291a33] text-[#4A4A4A] dark:text-[#e5dceb] p-4 rounded-2xl rounded-tl-none shadow-sm border border-[#F0EADF] dark:border-[#3a2347]";
+      bgClass = "bg-white dark:bg-[#291a33] text-[#4A4A4A] dark:text-[#e5dceb] p-4 rounded-[22px] rounded-tl-lg shadow-sm border border-[#F0EADF] dark:border-[#3a2347]";
     }
   }
 

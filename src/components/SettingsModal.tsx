@@ -263,7 +263,7 @@ export function SettingsModal({
                     <input
                       value={displayName}
                       onChange={(event) => setDisplayName(event.target.value)}
-                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] text-[#4A4A4A] dark:text-[#e5dceb] rounded-xl px-4 py-2.5 outline-none border border-[#E8E2D6] dark:border-[#3a2347] focus:ring-2 focus:ring-[#FF9F1C] text-sm"
+                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] text-[#4A4A4A] dark:text-[#e5dceb] rounded-2xl px-4 py-2.5 outline-none border border-[#E8E2D6] dark:border-[#3a2347] focus:ring-2 focus:ring-[#FF9F1C] text-sm"
                     />
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export function SettingsModal({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#5A5A40] dark:bg-[#48285c] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:translate-y-[-1px] transition-transform"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#5A5A40] dark:bg-[#48285c] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:translate-y-[-1px] transition-transform"
                   >
                     <Upload size={16} />
                     Upload Avatar
@@ -290,7 +290,7 @@ export function SettingsModal({
                   </span>
                 </div>
                 {profileMessage && (
-                  <p className="text-xs font-medium text-[#7B5E3C] dark:text-[#d9c1ef] bg-[#FFF7E6] dark:bg-[#2b1b38] border border-[#F4D6A3] dark:border-[#4b305e] rounded-xl px-3 py-2">
+                  <p className="text-xs font-medium text-[#7B5E3C] dark:text-[#d9c1ef] bg-[#FFF7E6] dark:bg-[#2b1b38] border border-[#F4D6A3] dark:border-[#4b305e] rounded-2xl px-3 py-2">
                     {profileMessage}
                   </p>
                 )}
@@ -298,14 +298,14 @@ export function SettingsModal({
                   <button
                     onClick={saveProfile}
                     disabled={busy}
-                    className="bg-[#2D2D2D] dark:bg-[#660874] text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+                    className="bg-[#2D2D2D] dark:bg-[#660874] text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm disabled:opacity-50"
                   >
                     {busy ? "Saving..." : "Save Profile"}
                   </button>
                 </div>
               </section>
 
-              <section className="overflow-hidden rounded-2xl border border-[#D8E7DF] dark:border-[#27485a] bg-[#F3FAF7] dark:bg-[#102332]">
+              <section className="overflow-hidden rounded-[24px] border border-[#D8E7DF] dark:border-[#27485a] bg-[#F3FAF7] dark:bg-[#102332]">
                 <div className="flex items-start justify-between gap-4 p-5">
                   <div className="space-y-2">
                     <div className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#2F5D54] dark:text-[#9fc7ff]">
@@ -340,7 +340,7 @@ export function SettingsModal({
                     type="button"
                     onClick={startUpgrade}
                     disabled={billingBusy || isPro}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#223832] px-4 py-3 text-sm font-bold text-white shadow-sm hover:translate-y-[-1px] transition-transform disabled:opacity-50 disabled:hover:translate-y-0"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#223832] px-5 py-3 text-sm font-bold text-white shadow-sm hover:translate-y-[-1px] transition-transform disabled:opacity-50 disabled:hover:translate-y-0"
                   >
                     <Crown size={16} />
                     {isPro ? "Pro Active" : billingBusy ? "Opening..." : "Upgrade"}
@@ -356,12 +356,12 @@ export function SettingsModal({
                   <h3 className="text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">Appearance</h3>
                   <p className="mt-1 text-xs text-[#8A817C] dark:text-[#a58ebd]">Hina wears the sun by day and the moon at night.</p>
                 </div>
-                <div className="grid grid-cols-2 rounded-xl bg-[#F0ECE3] dark:bg-[#2b1c35] p-1">
+                <div className="grid grid-cols-2 rounded-2xl bg-[#F0ECE3] dark:bg-[#2b1c35] p-1">
                   <button
                     type="button"
                     onClick={() => onThemeChange("light")}
                     aria-pressed={theme === "light"}
-                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold ${theme === "light" ? "bg-white text-[#6D5520] shadow-sm" : "text-[#8A817C] dark:text-[#a58ebd]"}`}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold ${theme === "light" ? "bg-white text-[#6D5520] shadow-sm" : "text-[#8A817C] dark:text-[#a58ebd]"}`}
                   >
                     <Sun size={17} /> Light
                   </button>
@@ -369,14 +369,14 @@ export function SettingsModal({
                     type="button"
                     onClick={() => onThemeChange("dark")}
                     aria-pressed={theme === "dark"}
-                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold ${theme === "dark" ? "bg-[#48285c] text-white shadow-sm" : "text-[#8A817C]"}`}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold ${theme === "dark" ? "bg-[#48285c] text-white shadow-sm" : "text-[#8A817C]"}`}
                   >
                     <Moon size={17} /> Dark
                   </button>
                 </div>
               </section>
 
-              <section className="overflow-hidden rounded-2xl border border-[#F2D7B6] dark:border-[#5a3652] bg-[#FFF8EC] dark:bg-[#261829]">
+              <section className="overflow-hidden rounded-[24px] border border-[#F2D7B6] dark:border-[#5a3652] bg-[#FFF8EC] dark:bg-[#261829]">
                 <div className="p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#FFD166] text-[#2D2D2D] flex items-center justify-center shadow-sm">
@@ -495,7 +495,7 @@ export function SettingsModal({
                       type="time"
                       value={proactiveSettings.quietHoursStart}
                       onChange={(event) => updateProactiveSettings({ quietHoursStart: event.target.value })}
-                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] rounded-xl px-3 py-2 outline-none border border-[#E8E2D6] dark:border-[#3a2347] text-sm"
+                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] rounded-2xl px-3 py-2 outline-none border border-[#E8E2D6] dark:border-[#3a2347] text-sm"
                     />
                   </label>
                   <label className="space-y-2 text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">
@@ -504,7 +504,7 @@ export function SettingsModal({
                       type="time"
                       value={proactiveSettings.quietHoursEnd}
                       onChange={(event) => updateProactiveSettings({ quietHoursEnd: event.target.value })}
-                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] rounded-xl px-3 py-2 outline-none border border-[#E8E2D6] dark:border-[#3a2347] text-sm"
+                      className="w-full bg-[#F7F2E9] dark:bg-[#291a33] rounded-2xl px-3 py-2 outline-none border border-[#E8E2D6] dark:border-[#3a2347] text-sm"
                     />
                   </label>
                 </div>
@@ -547,7 +547,7 @@ export function SettingsModal({
                 <button
                   onClick={clearHistory}
                   disabled={busy}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 p-3 rounded-xl font-medium border border-red-100 dark:border-red-900/30 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 p-3 rounded-2xl font-medium border border-red-100 dark:border-red-900/30 disabled:opacity-50"
                 >
                   <Trash2 size={16} />
                   Clear Cloud History
@@ -555,7 +555,7 @@ export function SettingsModal({
                 <button
                   type="button"
                   onClick={async () => { await onLogout(); onClose(); }}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-[#5E5753] dark:text-[#d8cadf] hover:bg-[#F2EEE7] dark:hover:bg-[#342042] p-3 rounded-xl font-medium border border-[#DED8CC] dark:border-[#483651]"
+                  className="w-full flex items-center justify-center gap-2 text-sm text-[#5E5753] dark:text-[#d8cadf] hover:bg-[#F2EEE7] dark:hover:bg-[#342042] p-3 rounded-2xl font-medium border border-[#DED8CC] dark:border-[#483651]"
                 >
                   <LogOut size={16} />
                   Log out

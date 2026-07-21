@@ -186,7 +186,7 @@ export function AuthPanel({ onAuthed }: AuthPanelProps) {
                 <button
                   onClick={sendCode}
                   disabled={busy || !identifier.trim()}
-                  className="self-end h-12 px-4 rounded-2xl bg-[#5A5A40] text-white font-bold disabled:opacity-40 flex items-center gap-2"
+                  className="self-end h-12 px-5 rounded-full bg-[#5A5A40] text-white font-bold shadow-sm disabled:opacity-40 flex items-center gap-2"
                 >
                   <ShieldCheck size={17} />
                   发送
@@ -199,7 +199,7 @@ export function AuthPanel({ onAuthed }: AuthPanelProps) {
             <button
               onClick={submit}
               disabled={busy || !identifier.trim() || !password.trim() || (mode !== "login" && !code.trim())}
-              className="w-full h-12 rounded-2xl bg-[#FF9F1C] text-white font-black disabled:bg-[#E8E2D6] disabled:text-[#AFA493] transition"
+              className="w-full h-12 rounded-full bg-[#FF9F1C] text-white font-black shadow-sm disabled:bg-[#E8E2D6] disabled:text-[#AFA493] disabled:shadow-none transition"
             >
               {busy ? "处理中..." : mode === "login" ? "进入 Hina" : mode === "register" ? "创建账号" : "重置密码"}
             </button>
@@ -207,7 +207,7 @@ export function AuthPanel({ onAuthed }: AuthPanelProps) {
             <button
               onClick={loginWithWeChat}
               disabled={busy}
-              className="w-full h-12 rounded-2xl border border-[#CFE6D9] bg-[#F4FBF7] text-[#28734E] font-black flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full h-12 rounded-full border border-[#CFE6D9] bg-[#F4FBF7] text-[#28734E] font-black shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <MessageCircle size={18} />
               微信登录
