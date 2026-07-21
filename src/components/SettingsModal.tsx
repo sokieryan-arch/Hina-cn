@@ -2,20 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Bell,
+  Camera,
   CheckCircle2,
   Clock,
   Coffee,
   Crown,
+  Eye,
   Heart,
-  Image as ImageIcon,
   LogOut,
   Moon,
+  Plus,
   QrCode,
   Settings,
   Sparkles,
   Sun,
   Trash2,
-  Upload,
   User,
   X,
   Zap,
@@ -97,8 +98,11 @@ export function SettingsModal({
   onLogout,
 }: SettingsModalProps) {
   const [displayName, setDisplayName] = useState(user.displayName);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl ?? null);
+  const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
+  const [avatarViewerOpen, setAvatarViewerOpen] = useState(false);
+  const [customTopicOpen, setCustomTopicOpen] = useState(false);
+  const [customTopic, setCustomTopic] = useState("");
+  const [topicMessage, setTopicMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
@@ -109,18 +113,19 @@ export function SettingsModal({
   useEffect(() => {
     if (!isOpen) return;
     setDisplayName(user.displayName);
-    setAvatarFile(null);
-    setAvatarPreview(user.avatarUrl ?? null);
+  }, [isOpen, user.displayName]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setAvatarActionsOpen(false);
+    setAvatarViewerOpen(false);
+    setCustomTopicOpen(false);
+    setCustomTopic("");
+    setTopicMessage(null);
     setProfileMessage(null);
     setBillingMessage(null);
     setCoffeeMethod(null);
-  }, [isOpen, proactiveSettings.favoriteTopics, user.avatarUrl, user.displayName]);
-
-  useEffect(() => () => {
-    if (avatarPreview?.startsWith("blob:")) {
-      URL.revokeObjectURL(avatarPreview);
-    }
-  }, [avatarPreview]);
+  }, [isOpen]);
 
   const updateProactiveSettings = async (patch: Partial<ProactiveSettings>) => {
     const next = { ...proactiveSettings, ...patch };
@@ -132,6 +137,7 @@ export function SettingsModal({
   const toggleTopic = async (topic: string) => {
     const selected = proactiveSettings.favoriteTopics.includes(topic);
     if (!selected && proactiveSettings.favoriteTopics.length >= 5) return;
+    setTopicMessage(null);
     await updateProactiveSettings({
       favoriteTopics: selected
         ? proactiveSettings.favoriteTopics.filter((item) => item !== topic)
@@ -139,41 +145,74 @@ export function SettingsModal({
     });
   };
 
-  const chooseAvatar = (file: File | undefined) => {
+  const addCustomTopic = async () => {
+    const trimmed = customTopic.trim().replace(/\s+/g, " ");
+    if (!trimmed) return;
+
+    if (proactiveSettings.favoriteTopics.length >= 5) {
+      setTopicMessage("Remove one topic before adding another.");
+      return;
+    }
+
+    const canonical = FAVORITE_TOPIC_OPTIONS.find((topic) => topic.toLowerCase() === trimmed.toLowerCase()) ?? trimmed;
+    if (proactiveSettings.favoriteTopics.some((topic) => topic.toLowerCase() === canonical.toLowerCase())) {
+      setTopicMessage("That topic is already selected.");
+      return;
+    }
+
+    try {
+      await updateProactiveSettings({
+        favoriteTopics: [...proactiveSettings.favoriteTopics, canonical],
+      });
+      setCustomTopic("");
+      setCustomTopicOpen(false);
+      setTopicMessage(null);
+    } catch {
+      setTopicMessage("Hina could not save that topic. Try again in a moment.");
+    }
+  };
+
+  const chooseAvatar = async (file: File | undefined) => {
     if (!file) return;
     if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
-      setAvatarFile(null);
       setProfileMessage("Choose a JPG, PNG, WebP, or GIF image.");
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      setAvatarFile(null);
       setProfileMessage("Avatar must be 10MB or smaller.");
       return;
     }
 
-    const preview = URL.createObjectURL(file);
-    setAvatarFile(file);
-    setAvatarPreview(preview);
-    setProfileMessage("New avatar ready. Save profile to upload it.");
-  };
-
-  const saveProfile = async () => {
     setBusy(true);
     setProfileMessage(null);
     try {
-      let nextUser = (await api.updateProfile({
-        displayName: displayName.trim() || user.displayName,
-      })).user;
-
-      if (avatarFile) {
-        nextUser = (await api.uploadAvatar(avatarFile)).user;
-        setAvatarFile(null);
-        setAvatarPreview(nextUser.avatarUrl ?? null);
-      }
-
+      const nextUser = (await api.uploadAvatar(file)).user;
       onUserChange(nextUser);
-      setProfileMessage("Profile saved.");
+      setAvatarActionsOpen(false);
+      setProfileMessage("Avatar updated.");
+    } catch (error) {
+      setProfileMessage(avatarErrorMessage(error));
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const saveDisplayName = async () => {
+    const nextName = displayName.trim();
+    if (!nextName) {
+      setDisplayName(user.displayName);
+      return;
+    }
+    if (nextName === user.displayName) return;
+
+    setBusy(true);
+    setProfileMessage(null);
+    try {
+      const nextUser = (await api.updateProfile({ displayName: nextName })).user;
+      onUserChange(nextUser);
+      setDisplayName(nextUser.displayName);
+      setProfileMessage("Name updated.");
     } catch (error) {
       setProfileMessage(avatarErrorMessage(error));
     } finally {
@@ -248,13 +287,22 @@ export function SettingsModal({
             <div className="p-6 space-y-6">
               <section className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-[#F7F2E9] dark:bg-[#291a33] border border-[#E8E2D6] dark:border-[#3a2347] overflow-hidden shadow-sm flex items-center justify-center text-[#B5A48B]">
-                    {avatarPreview ? (
-                      <img src={withAppBase(avatarPreview)} alt="Avatar preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setAvatarActionsOpen((open) => !open)}
+                    aria-label="Avatar actions"
+                    aria-expanded={avatarActionsOpen}
+                    className="group relative w-20 h-20 shrink-0 rounded-[24px] bg-[#F7F2E9] dark:bg-[#291a33] border border-[#E8E2D6] dark:border-[#3a2347] overflow-hidden shadow-sm flex items-center justify-center text-[#B5A48B] outline-none transition-all hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#FF9F1C] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#1c1224]"
+                  >
+                    {user.avatarUrl ? (
+                      <img src={withAppBase(user.avatarUrl)} alt="Your avatar" className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-[1.03]" />
                     ) : (
                       <User size={30} />
                     )}
-                  </div>
+                    <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-white/70 bg-black/55 text-white shadow-sm backdrop-blur-sm transition-transform group-hover:scale-105">
+                      <Camera size={12} />
+                    </span>
+                  </button>
                   <div className="flex-1 min-w-0 space-y-3">
                     <label className="text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb] flex items-center gap-2">
                       <User size={16} />
@@ -263,6 +311,16 @@ export function SettingsModal({
                     <input
                       value={displayName}
                       onChange={(event) => setDisplayName(event.target.value)}
+                      aria-label="Display name"
+                      onBlur={() => void saveDisplayName()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                        if (event.key === "Escape") {
+                          setDisplayName(user.displayName);
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      disabled={busy}
                       className="w-full bg-[#F7F2E9] dark:bg-[#291a33] text-[#4A4A4A] dark:text-[#e5dceb] rounded-2xl px-4 py-2.5 outline-none border border-[#E8E2D6] dark:border-[#3a2347] focus:ring-2 focus:ring-[#FF9F1C] text-sm"
                     />
                   </div>
@@ -273,36 +331,42 @@ export function SettingsModal({
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="sr-only"
-                  onChange={(event) => chooseAvatar(event.target.files?.[0])}
+                  onChange={(event) => void chooseAvatar(event.target.files?.[0])}
                 />
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-full bg-[#5A5A40] dark:bg-[#48285c] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:translate-y-[-1px] transition-transform"
-                  >
-                    <Upload size={16} />
-                    Upload Avatar
-                  </button>
-                  <span className="text-xs text-[#8A817C] dark:text-[#a58ebd] flex items-center gap-1.5">
-                    <ImageIcon size={14} />
-                    JPG, PNG, WebP, GIF under 10MB
-                  </span>
-                </div>
+                <AnimatePresence initial={false}>
+                  {avatarActionsOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="grid grid-cols-2 gap-2 rounded-[22px] border border-[#E8E2D6] bg-[#F9F6F0] p-2 dark:border-[#3a2347] dark:bg-[#291a33]"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setAvatarViewerOpen(true)}
+                        disabled={!user.avatarUrl}
+                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-white px-2 py-2.5 text-xs font-semibold text-[#4A4A4A] shadow-sm transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#1c1224] dark:text-[#e5dceb]"
+                      >
+                        <Eye size={16} />
+                        View avatar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={busy}
+                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-2xl bg-[#5A5A40] px-2 py-2.5 text-xs font-semibold text-white shadow-sm transition-transform hover:-translate-y-px disabled:opacity-50 dark:bg-[#48285c]"
+                      >
+                        <Camera size={16} />
+                        {busy ? "Updating..." : "Change avatar"}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {profileMessage && (
                   <p className="text-xs font-medium text-[#7B5E3C] dark:text-[#d9c1ef] bg-[#FFF7E6] dark:bg-[#2b1b38] border border-[#F4D6A3] dark:border-[#4b305e] rounded-2xl px-3 py-2">
                     {profileMessage}
                   </p>
                 )}
-                <div className="flex justify-end">
-                  <button
-                    onClick={saveProfile}
-                    disabled={busy}
-                    className="bg-[#2D2D2D] dark:bg-[#660874] text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm disabled:opacity-50"
-                  >
-                    {busy ? "Saving..." : "Save Profile"}
-                  </button>
-                </div>
               </section>
 
               <section className="overflow-hidden rounded-[24px] border border-[#D8E7DF] dark:border-[#27485a] bg-[#F3FAF7] dark:bg-[#102332]">
@@ -535,7 +599,66 @@ export function SettingsModal({
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (proactiveSettings.favoriteTopics.length >= 5) {
+                          setTopicMessage("Remove one topic before adding another.");
+                          return;
+                        }
+                        setCustomTopicOpen((open) => !open);
+                        if (customTopicOpen) setCustomTopic("");
+                        setTopicMessage(null);
+                      }}
+                      aria-label={customTopicOpen ? "Close custom topic" : "Add custom topic"}
+                      aria-expanded={customTopicOpen}
+                      className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-dashed border-[#A79D91] bg-white px-2.5 text-[#5A5A40] transition-colors hover:border-[#5A5A40] hover:bg-[#F2EEE7] dark:border-[#806991] dark:bg-[#1c1224] dark:text-[#d8cadf] dark:hover:bg-[#342042]"
+                    >
+                      <Plus size={16} className={`transition-transform ${customTopicOpen ? "rotate-45" : ""}`} />
+                    </button>
                   </div>
+                  <AnimatePresence initial={false}>
+                    {customTopicOpen && (
+                      <motion.form
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void addCustomTopic();
+                        }}
+                        className="flex items-center gap-2 rounded-[20px] border border-[#DED8CC] bg-[#F9F6F0] p-1.5 dark:border-[#483651] dark:bg-[#291a33]"
+                      >
+                        <input
+                          autoFocus
+                          value={customTopic}
+                          onChange={(event) => setCustomTopic(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              setCustomTopic("");
+                              setCustomTopicOpen(false);
+                              setTopicMessage(null);
+                            }
+                          }}
+                          maxLength={40}
+                          placeholder="New topic"
+                          aria-label="Custom favorite topic"
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm font-medium text-[#4A4A4A] outline-none placeholder:text-[#A49B94] dark:text-[#e5dceb] dark:placeholder:text-[#806f8d]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!customTopic.trim()}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#5A5A40] text-white transition-transform hover:scale-[1.03] disabled:opacity-35 dark:bg-[#48285c]"
+                          aria-label="Save custom topic"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </motion.form>
+                    )}
+                  </AnimatePresence>
+                  {topicMessage && (
+                    <p className="text-xs font-medium text-[#8A6A43] dark:text-[#d8bddc]">{topicMessage}</p>
+                  )}
                 </div>
               </section>
 
@@ -563,6 +686,37 @@ export function SettingsModal({
               </section>
             </div>
           </motion.div>
+          {avatarViewerOpen && user.avatarUrl && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-5 backdrop-blur-md"
+              onClick={() => setAvatarViewerOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 10 }}
+                className="relative max-h-[82vh] max-w-[min(88vw,560px)] overflow-hidden rounded-[30px] border border-white/20 bg-[#1c1224] shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <img
+                  src={withAppBase(user.avatarUrl)}
+                  alt="Your avatar"
+                  className="max-h-[82vh] w-auto object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => setAvatarViewerOpen(false)}
+                  className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+                  aria-label="Close avatar preview"
+                >
+                  <X size={20} />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
         </>
       )}
     </AnimatePresence>

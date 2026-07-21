@@ -53,9 +53,14 @@ test("settings modal keeps coffee QR codes tucked behind payment choices", () =>
   assert.match(markup, /Appearance/);
   assert.match(markup, /Favorite topics/);
   assert.match(markup, /Films &amp; TV/);
+  assert.match(markup, /aria-label="Avatar actions"/);
+  assert.match(markup, /aria-label="Add custom topic"/);
   assert.match(markup, /Log out/);
   assert.match(markup, /WeChat/);
   assert.match(markup, /Alipay/);
+  assert.doesNotMatch(markup, /Upload Avatar/);
+  assert.doesNotMatch(markup, /JPG, PNG, WebP, GIF under 10MB/);
+  assert.doesNotMatch(markup, /Save Profile/);
   assert.doesNotMatch(markup, /\/support\/wechat-coffee\.png/);
   assert.doesNotMatch(markup, /\/support\/alipay-coffee\.jpg/);
 });
