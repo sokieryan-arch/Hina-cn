@@ -56,6 +56,9 @@ function createProvider(options: { fail?: boolean } = {}) {
     async draftProactiveOpener() {
       return this.chat([{ role: "user", text: "open" }]);
     },
+    async draftMoment() {
+      return { body: "A tiny demo moment.", occasion: null };
+    },
   };
 }
 
@@ -161,6 +164,7 @@ test("successful chat increments usage once after model response", async () => {
     assert.equal(provider.calls.length, 1);
     assert.equal(billing.usedToday, 1);
     assert.equal(billing.remainingToday, 29);
+    assert.equal((await store.space.listNotes(user.id)).length, 2);
   });
 });
 

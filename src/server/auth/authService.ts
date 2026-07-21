@@ -29,6 +29,7 @@ function toPublicUser(user: UserRecord): PublicUser {
     email: user.email,
     hasPassword: Boolean(user.passwordHash),
     hasWeChat: user.hasWeChat === true,
+    createdAt: user.createdAt.toISOString(),
   };
 }
 

@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { normalizeLanguageTips } from "../shared/languageTips.js";
+import { STUDY_CATEGORIES, WISHLIST_KINDS, buildRelationshipSummary, noteDedupeKey, studyCategoryForTip, toClientCapsule, toClientNote, toClientWishlist } from "./space.js";
 import { saveAvatarUpload } from "./avatarUpload.js";
 import { canUseChat } from "./billing.js";
 import { clearSessionCookie, getSessionToken, setSessionCookie } from "./cookies.js";
@@ -13,6 +14,9 @@ import type { createWeChatOAuth } from "./auth/wechat.js";
 import type { LanguagePartnerProvider, SpeechProvider } from "./providers/types.js";
 import type { AppStore, MessageRecord } from "./store/types.js";
 import type { createRateLimiter } from "./rateLimit.js";
+import type { MomentService } from "./moments.js";
+import type { StudyCategory } from "../shared/languageTips.js";
+import type { WishlistKind } from "../shared/types.js";
 
 interface ApiDependencies {
   app: Express;
@@ -21,6 +25,7 @@ interface ApiDependencies {
   wechat: ReturnType<typeof createWeChatOAuth>;
   provider: LanguagePartnerProvider;
   speech: SpeechProvider;
+  moments?: MomentService;
   chatLimiter: ReturnType<typeof createRateLimiter>;
   ttsLimiter: ReturnType<typeof createRateLimiter>;
   uploadsRoot?: string;
@@ -28,6 +33,22 @@ interface ApiDependencies {
     database?: () => Promise<{ ok: boolean; error?: string }>;
     redis?: () => Promise<{ ok: boolean; error?: string }>;
   };
+}
+
+function requiredText(value: unknown, field: string, maxLength: number): string {
+  const text = typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+  if (!text) throw Object.assign(new Error(`missing_${field}`), { statusCode: 400 });
+  return text;
+}
+
+function optionalText(value: unknown, maxLength: number): string | null {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, maxLength) : null;
+}
+
+function progressValue(value: unknown, fallback = 0) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(100, Math.max(0, Math.round(value)))
+    : fallback;
 }
 
 function toClientMessage(message: MessageRecord) {
@@ -254,6 +275,177 @@ export function registerApiRoutes(deps: ApiDependencies) {
     }
   });
 
+  app.get("/api/space/moments", async (req, res) => {
+    try {
+      await requireUser(req, deps);
+      await deps.moments?.ensureMoment();
+      const moments = await store.space.listMoments();
+      res.json({
+        moments: moments.map((moment) => ({
+          id: moment.id,
+          body: moment.body,
+          occasion: moment.occasion ?? null,
+          publishedAt: moment.publishedAt.toISOString(),
+        })),
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/space/notes", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const requested = typeof req.query.category === "string" ? req.query.category : undefined;
+      const category = requested && STUDY_CATEGORIES.has(requested as StudyCategory)
+        ? requested as StudyCategory
+        : undefined;
+      const notes = await store.space.listNotes(user.id, category);
+      res.json({ notes: notes.map(toClientNote) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.delete("/api/space/notes", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      await store.space.clearNotes(user.id);
+      res.json({ ok: true });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.delete("/api/space/notes/:id", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const deleted = await store.space.deleteNote(user.id, req.params.id);
+      res.status(deleted ? 200 : 404).json(deleted ? { ok: true } : { error: "note_not_found" });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/space/wishlist", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      res.json({ items: (await store.space.listWishlist(user.id)).map(toClientWishlist) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/space/wishlist", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const kind = String(req.body?.kind ?? "goal").toLowerCase() as WishlistKind;
+      if (!WISHLIST_KINDS.has(kind)) return res.status(400).json({ error: "invalid_wishlist_kind" });
+      const completed = req.body?.completed === true;
+      const item = await store.space.createWishlist({
+        userId: user.id,
+        kind,
+        title: requiredText(req.body?.title, "title", 120),
+        details: optionalText(req.body?.details, 500),
+        targetDate: optionalText(req.body?.targetDate, 10),
+        progress: completed ? 100 : progressValue(req.body?.progress),
+        completed,
+      });
+      res.status(201).json({ item: toClientWishlist(item) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.patch("/api/space/wishlist/:id", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const patch: Record<string, unknown> = {};
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "kind")) {
+        const kind = String(req.body.kind).toLowerCase() as WishlistKind;
+        if (!WISHLIST_KINDS.has(kind)) return res.status(400).json({ error: "invalid_wishlist_kind" });
+        patch.kind = kind;
+      }
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "title")) patch.title = requiredText(req.body.title, "title", 120);
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "details")) patch.details = optionalText(req.body.details, 500);
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "targetDate")) patch.targetDate = optionalText(req.body.targetDate, 10);
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "progress")) patch.progress = progressValue(req.body.progress);
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "completed")) {
+        patch.completed = req.body.completed === true;
+        if (patch.completed) patch.progress = 100;
+      }
+      const item = await store.space.updateWishlist(user.id, req.params.id, patch);
+      if (!item) return res.status(404).json({ error: "wishlist_item_not_found" });
+      res.json({ item: toClientWishlist(item) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.delete("/api/space/wishlist/:id", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const deleted = await store.space.deleteWishlist(user.id, req.params.id);
+      res.status(deleted ? 200 : 404).json(deleted ? { ok: true } : { error: "wishlist_item_not_found" });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/space/capsules", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const now = new Date();
+      res.json({ capsules: (await store.space.listCapsules(user.id)).map((capsule) => toClientCapsule(capsule, now)) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/space/capsules", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const unlockAt = new Date(String(req.body?.unlockAt ?? ""));
+      if (Number.isNaN(unlockAt.getTime()) || unlockAt.getTime() <= Date.now()) {
+        return res.status(400).json({ error: "invalid_unlock_date" });
+      }
+      const capsule = await store.space.createCapsule({
+        userId: user.id,
+        title: requiredText(req.body?.title, "title", 120),
+        body: requiredText(req.body?.body, "capsule_body", 2000),
+        unlockAt,
+      });
+      res.status(201).json({ capsule: toClientCapsule(capsule, new Date()) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/space/capsules/:id/open", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const now = new Date();
+      const capsule = await store.space.openCapsule(user.id, req.params.id, now);
+      if (!capsule) return res.status(403).json({ error: "capsule_locked_or_missing" });
+      res.json({ capsule: toClientCapsule(capsule, now) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/space/relationship", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const summary = buildRelationshipSummary({
+        createdAt: new Date(user.createdAt),
+        counts: await store.space.getRelationshipCounts(user.id),
+      });
+      res.json({ relationship: summary });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
   app.post("/api/chat", async (req, res) => {
     try {
       const user = await requireUser(req, deps);
@@ -294,6 +486,18 @@ export function registerApiRoutes(deps: ApiDependencies) {
           type: "tip",
           tipKind: tip.type,
         }));
+        const tipMessage = tipMessages[tipMessages.length - 1];
+        await store.space.saveNote({
+          userId: user.id,
+          category: studyCategoryForTip(tip),
+          title: tip.title,
+          body: tip.body,
+          example: tip.example ?? null,
+          original: tip.original ?? null,
+          suggestion: tip.suggestion ?? null,
+          sourceMessageId: tipMessage.id,
+          dedupeKey: noteDedupeKey(tip),
+        });
       }
       const nextBilling = await store.billing.incrementChatUsage(user.id);
 
@@ -302,6 +506,7 @@ export function registerApiRoutes(deps: ApiDependencies) {
         tips,
         billing: nextBilling,
         messages: [responseMessage, ...tipMessages].map(toClientMessage),
+        wishlistSuggestion: data.wishlistSuggestion,
       });
     } catch (error) {
       sendError(res, error);

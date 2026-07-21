@@ -8,9 +8,12 @@ import {
   Crown,
   Heart,
   Image as ImageIcon,
+  LogOut,
+  Moon,
   QrCode,
   Settings,
   Sparkles,
+  Sun,
   Trash2,
   Upload,
   User,
@@ -34,7 +37,25 @@ interface SettingsModalProps {
   onBillingChange: (billing: BillingSummary) => void;
   onClearHistory: () => void;
   onProactiveSettingsChange: (settings: ProactiveSettings) => void;
+  theme: "light" | "dark";
+  onThemeChange: (theme: "light" | "dark") => void;
+  onLogout: () => Promise<void>;
 }
+
+const FAVORITE_TOPIC_OPTIONS = [
+  "Daily life",
+  "Films & TV",
+  "Music",
+  "Food",
+  "Travel",
+  "Campus",
+  "Books",
+  "Art",
+  "Tech",
+  "IELTS",
+  "TOEFL",
+  "Work",
+] as const;
 
 function formatUsage(billing: BillingSummary | null) {
   if (!billing) return "Loading usage...";
@@ -71,11 +92,13 @@ export function SettingsModal({
   onBillingChange,
   onClearHistory,
   onProactiveSettingsChange,
+  theme,
+  onThemeChange,
+  onLogout,
 }: SettingsModalProps) {
   const [displayName, setDisplayName] = useState(user.displayName);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl ?? null);
-  const [topicText, setTopicText] = useState(proactiveSettings.favoriteTopics.join(", "));
   const [busy, setBusy] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
@@ -88,7 +111,6 @@ export function SettingsModal({
     setDisplayName(user.displayName);
     setAvatarFile(null);
     setAvatarPreview(user.avatarUrl ?? null);
-    setTopicText(proactiveSettings.favoriteTopics.join(", "));
     setProfileMessage(null);
     setBillingMessage(null);
     setCoffeeMethod(null);
@@ -105,6 +127,16 @@ export function SettingsModal({
     onProactiveSettingsChange(next);
     const result = await api.saveProactiveSettings(next);
     onProactiveSettingsChange(result.settings);
+  };
+
+  const toggleTopic = async (topic: string) => {
+    const selected = proactiveSettings.favoriteTopics.includes(topic);
+    if (!selected && proactiveSettings.favoriteTopics.length >= 5) return;
+    await updateProactiveSettings({
+      favoriteTopics: selected
+        ? proactiveSettings.favoriteTopics.filter((item) => item !== topic)
+        : [...proactiveSettings.favoriteTopics, topic],
+    });
   };
 
   const chooseAvatar = (file: File | undefined) => {
@@ -208,7 +240,7 @@ export function SettingsModal({
                 <Settings size={20} className="text-[#FF9F1C]" />
                 Settings
               </h2>
-              <button onClick={onClose} className="p-1.5 text-[#8A817C] hover:bg-[#E8E2D6] dark:hover:bg-[#3a2347] rounded-full">
+              <button onClick={onClose} className="p-1.5 text-[#8A817C] hover:bg-[#E8E2D6] dark:hover:bg-[#3a2347] rounded-full" title="Close settings" aria-label="Close settings">
                 <X size={18} />
               </button>
             </div>
@@ -316,6 +348,31 @@ export function SettingsModal({
                   {billingMessage && (
                     <p className="text-xs font-medium text-[#47625b] dark:text-[#b6d5e8]">{billingMessage}</p>
                   )}
+                </div>
+              </section>
+
+              <section className="border-t border-[#E8E2D6] dark:border-[#3a2347] pt-6 space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">Appearance</h3>
+                  <p className="mt-1 text-xs text-[#8A817C] dark:text-[#a58ebd]">Hina wears the sun by day and the moon at night.</p>
+                </div>
+                <div className="grid grid-cols-2 rounded-xl bg-[#F0ECE3] dark:bg-[#2b1c35] p-1">
+                  <button
+                    type="button"
+                    onClick={() => onThemeChange("light")}
+                    aria-pressed={theme === "light"}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold ${theme === "light" ? "bg-white text-[#6D5520] shadow-sm" : "text-[#8A817C] dark:text-[#a58ebd]"}`}
+                  >
+                    <Sun size={17} /> Light
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onThemeChange("dark")}
+                    aria-pressed={theme === "dark"}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold ${theme === "dark" ? "bg-[#48285c] text-white shadow-sm" : "text-[#8A817C]"}`}
+                  >
+                    <Moon size={17} /> Dark
+                  </button>
                 </div>
               </section>
 
@@ -452,24 +509,41 @@ export function SettingsModal({
                   </label>
                 </div>
 
-                <label className="block space-y-2 text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">
-                  <span className="flex items-center gap-2">
+                <div className="block space-y-3 text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
                     <Sparkles size={16} />
                     Favorite topics
+                    </span>
+                    <span className="text-xs font-medium text-[#8A817C] dark:text-[#a58ebd]">{proactiveSettings.favoriteTopics.length}/5</span>
                   </span>
-                  <input
-                    value={topicText}
-                    onChange={(event) => setTopicText(event.target.value)}
-                    onBlur={() => updateProactiveSettings({
-                      favoriteTopics: topicText.split(",").map((topic) => topic.trim()).filter(Boolean).slice(0, 3),
+                  <div className="flex flex-wrap gap-2">
+                    {[...FAVORITE_TOPIC_OPTIONS, ...proactiveSettings.favoriteTopics.filter((topic) => !FAVORITE_TOPIC_OPTIONS.includes(topic as typeof FAVORITE_TOPIC_OPTIONS[number]))].map((topic) => {
+                      const selected = proactiveSettings.favoriteTopics.includes(topic);
+                      return (
+                        <button
+                          key={topic}
+                          type="button"
+                          onClick={() => toggleTopic(topic)}
+                          aria-pressed={selected}
+                          disabled={!selected && proactiveSettings.favoriteTopics.length >= 5}
+                          className={`rounded-full border px-3 py-2 text-xs font-bold transition-colors ${selected
+                            ? "border-[#5A5A40] bg-[#5A5A40] text-white dark:border-[#8b66a3] dark:bg-[#48285c]"
+                            : "border-[#DED8CC] bg-[#F9F6F0] text-[#746B66] dark:border-[#483651] dark:bg-[#291a33] dark:text-[#bda9ca]"} disabled:cursor-not-allowed disabled:opacity-40`}
+                        >
+                          {topic}
+                        </button>
+                      );
                     })}
-                    placeholder="films, food, IELTS"
-                    className="w-full bg-[#F7F2E9] dark:bg-[#291a33] rounded-xl px-4 py-2.5 outline-none border border-[#E8E2D6] dark:border-[#3a2347] focus:ring-2 focus:ring-[#FF9F1C] text-sm"
-                  />
-                </label>
+                  </div>
+                </div>
               </section>
 
-              <section className="border-t border-[#E8E2D6] dark:border-[#3a2347] pt-6">
+              <section className="border-t border-[#E8E2D6] dark:border-[#3a2347] pt-6 space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-[#4A4A4A] dark:text-[#e5dceb]">Account</h3>
+                  <p className="mt-1 text-xs text-[#8A817C] dark:text-[#a58ebd]">{user.email ?? user.phone ?? "Hina friend"}</p>
+                </div>
                 <button
                   onClick={clearHistory}
                   disabled={busy}
@@ -477,6 +551,14 @@ export function SettingsModal({
                 >
                   <Trash2 size={16} />
                   Clear Cloud History
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => { await onLogout(); onClose(); }}
+                  className="w-full flex items-center justify-center gap-2 text-sm text-[#5E5753] dark:text-[#d8cadf] hover:bg-[#F2EEE7] dark:hover:bg-[#342042] p-3 rounded-xl font-medium border border-[#DED8CC] dark:border-[#483651]"
+                >
+                  <LogOut size={16} />
+                  Log out
                 </button>
               </section>
             </div>

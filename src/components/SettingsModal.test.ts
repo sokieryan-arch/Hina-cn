@@ -11,6 +11,7 @@ const user: CurrentUser = {
   avatarUrl: null,
   hasPassword: true,
   hasWeChat: false,
+  createdAt: "2026-06-30T08:00:00.000Z",
 };
 
 const billing: BillingSummary = {
@@ -41,11 +42,18 @@ test("settings modal keeps coffee QR codes tucked behind payment choices", () =>
     onBillingChange: () => {},
     onClearHistory: () => {},
     onProactiveSettingsChange: () => {},
+    theme: "light",
+    onThemeChange: () => {},
+    onLogout: async () => {},
   }));
 
   assert.match(markup, /Buy Hina a cup of coffee/);
   assert.match(markup, /server hosting and maintenance/);
   assert.match(markup, /Choose WeChat or Alipay to reveal a QR code/);
+  assert.match(markup, /Appearance/);
+  assert.match(markup, /Favorite topics/);
+  assert.match(markup, /Films &amp; TV/);
+  assert.match(markup, /Log out/);
   assert.match(markup, /WeChat/);
   assert.match(markup, /Alipay/);
   assert.doesNotMatch(markup, /\/support\/wechat-coffee\.png/);

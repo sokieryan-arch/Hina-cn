@@ -1,4 +1,17 @@
-import type { BillingSummary, CurrentUser, Message, ProactiveSettings } from "../shared/types.js";
+import type {
+  BillingSummary,
+  CurrentUser,
+  HinaMoment,
+  Message,
+  ProactiveSettings,
+  RelationshipSummary,
+  StudyNote,
+  TimeCapsule,
+  WishlistItem,
+  WishlistKind,
+  WishlistSuggestion,
+} from "../shared/types.js";
+import type { StudyCategory } from "../shared/languageTips.js";
 import { withAppBase } from "../lib/appPath.js";
 
 export class ApiError extends Error {
@@ -73,7 +86,7 @@ export const api = {
   billingMe: () => apiFetch<{ billing: BillingSummary }>("/api/billing/me"),
   billingCheckout: () => apiFetch<never>("/api/billing/checkout", { method: "POST" }),
   chat: (messages: Pick<Message, "role" | "text">[]) =>
-    apiFetch<{ response: string; messages: Message[]; billing: BillingSummary }>("/api/chat", {
+    apiFetch<{ response: string; messages: Message[]; billing: BillingSummary; wishlistSuggestion?: WishlistSuggestion }>("/api/chat", {
       method: "POST",
       body: JSON.stringify({ messages }),
     }),
@@ -93,4 +106,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ localDate: new Date().toISOString().slice(0, 10) }),
     }),
+  moments: () => apiFetch<{ moments: HinaMoment[] }>("/api/space/moments"),
+  notes: (category?: StudyCategory) => apiFetch<{ notes: StudyNote[] }>(
+    `/api/space/notes${category ? `?category=${encodeURIComponent(category)}` : ""}`,
+  ),
+  deleteNote: (id: string) => apiFetch<{ ok: true }>(`/api/space/notes/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  clearNotes: () => apiFetch<{ ok: true }>("/api/space/notes", { method: "DELETE" }),
+  wishlist: () => apiFetch<{ items: WishlistItem[] }>("/api/space/wishlist"),
+  createWishlist: (input: {
+    kind: WishlistKind;
+    title: string;
+    details?: string | null;
+    targetDate?: string | null;
+    progress?: number;
+    completed?: boolean;
+  }) => apiFetch<{ item: WishlistItem }>("/api/space/wishlist", { method: "POST", body: JSON.stringify(input) }),
+  updateWishlist: (id: string, patch: Partial<Pick<WishlistItem, "kind" | "title" | "details" | "targetDate" | "progress" | "completed">>) =>
+    apiFetch<{ item: WishlistItem }>(`/api/space/wishlist/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+  deleteWishlist: (id: string) => apiFetch<{ ok: true }>(`/api/space/wishlist/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  capsules: () => apiFetch<{ capsules: TimeCapsule[] }>("/api/space/capsules"),
+  createCapsule: (input: { title: string; body: string; unlockAt: string }) =>
+    apiFetch<{ capsule: TimeCapsule }>("/api/space/capsules", { method: "POST", body: JSON.stringify(input) }),
+  openCapsule: (id: string) => apiFetch<{ capsule: TimeCapsule }>(`/api/space/capsules/${encodeURIComponent(id)}/open`, { method: "POST" }),
+  relationship: () => apiFetch<{ relationship: RelationshipSummary }>("/api/space/relationship"),
 };

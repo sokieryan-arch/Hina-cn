@@ -1,4 +1,5 @@
 import type { LanguageTip } from "../../shared/languageTips.js";
+import type { WishlistSuggestion } from "../../shared/types.js";
 import type { ProactivePromptInput } from "../proactive.js";
 
 export type ChatRole = "user" | "model";
@@ -11,6 +12,17 @@ export interface ChatMessageInput {
 export interface LanguagePartnerResponse {
   response: string;
   tips: LanguageTip[];
+  wishlistSuggestion?: WishlistSuggestion;
+}
+
+export interface MomentPromptInput {
+  localDate: string;
+  occasion?: string | null;
+}
+
+export interface MomentDraft {
+  body: string;
+  occasion?: string | null;
 }
 
 export interface SpeechResponse {
@@ -21,6 +33,7 @@ export interface SpeechResponse {
 export interface LanguagePartnerProvider {
   chat(messages: ChatMessageInput[]): Promise<LanguagePartnerResponse>;
   draftProactiveOpener(input: ProactivePromptInput): Promise<LanguagePartnerResponse>;
+  draftMoment(input: MomentPromptInput): Promise<MomentDraft>;
 }
 
 export interface SpeechProvider {

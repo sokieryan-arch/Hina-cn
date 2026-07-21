@@ -19,4 +19,6 @@ test("Hina prompt requires concrete correction and stealable expression tips", (
   assert.match(HINA_SYSTEM_INSTRUCTION, /Tip 2/i);
   assert.match(HINA_SYSTEM_INSTRUCTION, /Chinese meaning/i);
   assert.match(HINA_SYSTEM_INSTRUCTION, /JSON schema/i);
+  assert.match(HINA_SYSTEM_INSTRUCTION, /wishlistSuggestion/i);
+  assert.match(HINA_SYSTEM_INSTRUCTION, /studyCategory/i);
 });

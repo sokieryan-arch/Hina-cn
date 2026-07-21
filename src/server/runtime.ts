@@ -5,6 +5,7 @@ import { validateRuntimeEnv } from "./config.js";
 import { getRuntimeEnvironment } from "./runtimeEnv.js";
 import { createCompositeNotifier } from "./notifiers.js";
 import { createRateLimiter } from "./rateLimit.js";
+import { createMomentService } from "./moments.js";
 import { DemoLanguagePartnerProvider } from "./providers/demoProvider.js";
 import { VolcengineArkProvider } from "./providers/arkProvider.js";
 import { createMemoryAppStore } from "./store/memoryAppStore.js";
@@ -49,11 +50,13 @@ export async function createRuntime() {
     notifier: createCompositeNotifier(),
   });
   const provider = createProvider();
+  const moments = createMomentService({ store, provider });
 
   return {
     store,
     auth,
     provider,
+    moments,
     speech: provider,
     wechat: createWeChatOAuth({
       stateStore: new Map(),

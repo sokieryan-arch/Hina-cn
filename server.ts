@@ -32,6 +32,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
+    runtime.moments.start();
     console.log(`Hina CN running on http://localhost:${PORT}`);
   });
 }

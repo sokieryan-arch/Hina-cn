@@ -20,6 +20,7 @@ test("calls Ark chat completions and parses Hina JSON with exactly two tips", as
                   { type: "correction", title: "Tiny fix", body: "Use went for past time." },
                   { type: "expression", title: "Phrase", body: "Main-character energy means confident presence." },
                 ],
+                wishlistSuggestion: { kind: "goal", title: "Practice past tense for seven days" },
               }),
             },
           },
@@ -32,8 +33,29 @@ test("calls Ark chat completions and parses Hina JSON with exactly two tips", as
 
   assert.equal(result.response, "That subway lizard has main-character energy.");
   assert.equal(result.tips.length, 2);
+  assert.equal(result.wishlistSuggestion?.kind, "goal");
   assert.equal(requests.length, 1);
   assert.match(String(requests[0].headers), /Bearer ark-test-key/);
+});
+
+test("drafts a standalone global Hina moment without chat context", async () => {
+  let requestBody: any;
+  const provider = new VolcengineArkProvider({
+    apiKey: "ark-test-key",
+    baseUrl: "https://ark.example.test/api/v3",
+    chatModel: "doubao-test",
+    fetchImpl: async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify({ body: "A tiny library afternoon. 📚", occasion: null }) } }],
+      }));
+    },
+  });
+
+  const result = await provider.draftMoment({ localDate: "2026-07-22", occasion: null });
+  assert.equal(result.body, "A tiny library afternoon. 📚");
+  assert.equal(requestBody.response_format.type, "json_object");
+  assert.match(requestBody.messages[0].content, /Never mention a user/);
 });
 
 test("falls back to safe tips when Ark returns invalid JSON", async () => {

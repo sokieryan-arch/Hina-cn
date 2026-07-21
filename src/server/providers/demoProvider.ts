@@ -26,6 +26,13 @@ export class DemoLanguagePartnerProvider implements LanguagePartnerProvider {
     return this.chat([{ role: "user", text: buildProactivePrompt(input) }]);
   }
 
+  async draftMoment(input: Parameters<LanguagePartnerProvider["draftMoment"]>[0]) {
+    return {
+      body: "I found a sunlit corner in the library today, read exactly four pages, and rewarded this heroic achievement with peach gummies. Academic excellence is a flexible concept. 📚🍑",
+      occasion: input.occasion ?? null,
+    };
+  }
+
   async speak() {
     return null;
   }

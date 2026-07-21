@@ -32,7 +32,7 @@ test("creates proactive nudges after the configured gap outside quiet hours", ()
     favoriteTopics: ["films", "IELTS", "food", "ignored"],
   });
 
-  assert.equal(settings.favoriteTopics.length, 3);
+  assert.deepEqual(settings.favoriteTopics, ["Films & TV", "IELTS", "Food", "ignored"]);
   assert.equal(
     shouldCreateProactiveNudge(settings, {
       now: new Date("2026-06-09T15:00:00+08:00"),

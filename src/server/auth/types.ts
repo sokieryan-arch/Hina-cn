@@ -28,6 +28,7 @@ export interface PublicUser {
   email?: string | null;
   hasPassword: boolean;
   hasWeChat: boolean;
+  createdAt: string;
 }
 
 export interface SessionRecord {

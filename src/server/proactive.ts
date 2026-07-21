@@ -25,6 +25,32 @@ const DEFAULT_SETTINGS: ProactiveSettings = {
   favoriteTopics: [],
 };
 
+export const FAVORITE_TOPIC_OPTIONS = [
+  "Daily life",
+  "Films & TV",
+  "Music",
+  "Food",
+  "Travel",
+  "Campus",
+  "Books",
+  "Art",
+  "Tech",
+  "IELTS",
+  "TOEFL",
+  "Work",
+] as const;
+
+const TOPIC_ALIASES = new Map<string, string>([
+  ["daily", "Daily life"],
+  ["daily life", "Daily life"],
+  ["film", "Films & TV"],
+  ["films", "Films & TV"],
+  ["movies", "Films & TV"],
+  ["tv", "Films & TV"],
+  ["films & tv", "Films & TV"],
+  ...FAVORITE_TOPIC_OPTIONS.map((topic) => [topic.toLowerCase(), topic] as [string, string]),
+]);
+
 function isTime(value: unknown): value is string {
   return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
@@ -61,7 +87,9 @@ export function normalizeProactiveSettings(input: unknown): ProactiveSettings {
     ? source.favoriteTopics
       .map((topic) => typeof topic === "string" ? topic.trim().slice(0, 40) : "")
       .filter(Boolean)
-      .slice(0, 3)
+      .map((topic) => TOPIC_ALIASES.get(topic.toLowerCase()) ?? topic)
+      .filter((topic, index, values) => values.indexOf(topic) === index)
+      .slice(0, 5)
     : [];
 
   return {

@@ -3,7 +3,16 @@ import pg from "pg";
 import { buildBillingSummary, getUsageDate } from "../billing.js";
 import { normalizeProactiveSettings } from "../proactive.js";
 import type { ParsedIdentifier, UserRecord } from "../auth/types.js";
-import type { AppStore, CreateMessageInput, MessageRecord, ProactiveSettingsRecord } from "./types.js";
+import type {
+  AppStore,
+  CreateMessageInput,
+  HinaMomentRecord,
+  MessageRecord,
+  ProactiveSettingsRecord,
+  StudyNoteRecord,
+  TimeCapsuleRecord,
+  WishlistItemRecord,
+} from "./types.js";
 
 const { Pool } = pg;
 
@@ -31,6 +40,59 @@ function rowToMessage(row: any): MessageRecord {
     text: row.text,
     type: row.type,
     tipKind: row.tip_kind,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToMoment(row: any): HinaMomentRecord {
+  return {
+    id: row.id,
+    body: row.body,
+    occasion: row.occasion,
+    publishedAt: row.published_at,
+    nextDueAt: row.next_due_at,
+  };
+}
+
+function rowToNote(row: any): StudyNoteRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    category: row.category,
+    title: row.title,
+    body: row.body,
+    example: row.example,
+    original: row.original,
+    suggestion: row.suggestion,
+    sourceMessageId: row.source_message_id,
+    dedupeKey: row.dedupe_key,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToWishlist(row: any): WishlistItemRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    kind: row.kind,
+    title: row.title,
+    details: row.details,
+    targetDate: row.target_date ? String(row.target_date).slice(0, 10) : null,
+    progress: row.progress,
+    completed: row.completed,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToCapsule(row: any): TimeCapsuleRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    body: row.body,
+    unlockAt: row.unlock_at,
+    openedAt: row.opened_at,
     createdAt: row.created_at,
   };
 }
@@ -340,6 +402,143 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           [userId, plan, proExpiresAt],
         );
         return getBillingSummary(userId, now);
+      },
+    },
+    space: {
+      async listMoments(limit = 40) {
+        const result = await pool.query(
+          "select * from hina_moments order by published_at desc limit $1",
+          [Math.min(100, Math.max(1, limit))],
+        );
+        return result.rows.map(rowToMoment);
+      },
+      async latestMoment() {
+        const result = await pool.query("select * from hina_moments order by published_at desc limit 1");
+        return result.rows[0] ? rowToMoment(result.rows[0]) : null;
+      },
+      async addMomentIfDue(input) {
+        const client = await pool.connect();
+        try {
+          await client.query("begin");
+          await client.query("select pg_advisory_xact_lock(hashtext('hina_moments_generation'))");
+          const latest = await client.query("select next_due_at from hina_moments order by published_at desc limit 1");
+          if (latest.rows[0]?.next_due_at && new Date(latest.rows[0].next_due_at).getTime() > input.now.getTime()) {
+            await client.query("rollback");
+            return null;
+          }
+          const result = await client.query(
+            `insert into hina_moments (id, body, occasion, published_at, next_due_at)
+             values ($1, $2, $3, $4, $5) returning *`,
+            [nanoid(), input.body, input.occasion ?? null, input.now, input.nextDueAt],
+          );
+          await client.query("commit");
+          return rowToMoment(result.rows[0]);
+        } catch (error) {
+          await client.query("rollback").catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
+      async listNotes(userId, category) {
+        const result = category
+          ? await pool.query("select * from study_notes where user_id = $1 and category = $2 order by created_at desc", [userId, category])
+          : await pool.query("select * from study_notes where user_id = $1 order by created_at desc", [userId]);
+        return result.rows.map(rowToNote);
+      },
+      async saveNote(input) {
+        const result = await pool.query(
+          `insert into study_notes (
+             id, user_id, category, title, body, example, original, suggestion, source_message_id, dedupe_key
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           on conflict (user_id, dedupe_key) do nothing returning *`,
+          [
+            nanoid(), input.userId, input.category, input.title, input.body, input.example ?? null,
+            input.original ?? null, input.suggestion ?? null, input.sourceMessageId ?? null, input.dedupeKey,
+          ],
+        );
+        return result.rows[0] ? rowToNote(result.rows[0]) : null;
+      },
+      async deleteNote(userId, noteId) {
+        const result = await pool.query("delete from study_notes where id = $1 and user_id = $2", [noteId, userId]);
+        return (result.rowCount ?? 0) > 0;
+      },
+      async clearNotes(userId) {
+        await pool.query("delete from study_notes where user_id = $1", [userId]);
+      },
+      async listWishlist(userId) {
+        const result = await pool.query("select * from wishlist_items where user_id = $1 order by created_at desc", [userId]);
+        return result.rows.map(rowToWishlist);
+      },
+      async createWishlist(input) {
+        const result = await pool.query(
+          `insert into wishlist_items (id, user_id, kind, title, details, target_date, progress, completed)
+           values ($1, $2, $3, $4, $5, $6, $7, $8) returning *`,
+          [nanoid(), input.userId, input.kind, input.title, input.details ?? null, input.targetDate ?? null, input.progress, input.completed],
+        );
+        return rowToWishlist(result.rows[0]);
+      },
+      async updateWishlist(userId, itemId, patch) {
+        const hasDetails = Object.prototype.hasOwnProperty.call(patch, "details");
+        const hasTargetDate = Object.prototype.hasOwnProperty.call(patch, "targetDate");
+        const result = await pool.query(
+          `update wishlist_items set
+             kind = coalesce($3, kind),
+             title = coalesce($4, title),
+             details = case when $5 then $6 else details end,
+             target_date = case when $7 then $8::date else target_date end,
+             progress = coalesce($9, progress),
+             completed = coalesce($10, completed),
+             updated_at = now()
+           where id = $1 and user_id = $2 returning *`,
+          [
+            itemId, userId, patch.kind ?? null, patch.title ?? null, hasDetails, patch.details ?? null,
+            hasTargetDate, patch.targetDate ?? null, patch.progress ?? null, patch.completed ?? null,
+          ],
+        );
+        return result.rows[0] ? rowToWishlist(result.rows[0]) : null;
+      },
+      async deleteWishlist(userId, itemId) {
+        const result = await pool.query("delete from wishlist_items where id = $1 and user_id = $2", [itemId, userId]);
+        return (result.rowCount ?? 0) > 0;
+      },
+      async listCapsules(userId) {
+        const result = await pool.query("select * from time_capsules where user_id = $1 order by unlock_at asc", [userId]);
+        return result.rows.map(rowToCapsule);
+      },
+      async createCapsule(input) {
+        const result = await pool.query(
+          `insert into time_capsules (id, user_id, title, body, unlock_at)
+           values ($1, $2, $3, $4, $5) returning *`,
+          [nanoid(), input.userId, input.title, input.body, input.unlockAt],
+        );
+        return rowToCapsule(result.rows[0]);
+      },
+      async openCapsule(userId, capsuleId, now) {
+        const result = await pool.query(
+          `update time_capsules set opened_at = coalesce(opened_at, $3)
+           where id = $1 and user_id = $2 and unlock_at <= $3 returning *`,
+          [capsuleId, userId, now],
+        );
+        return result.rows[0] ? rowToCapsule(result.rows[0]) : null;
+      },
+      async getRelationshipCounts(userId) {
+        const [messagesResult, datesResult, notesResult, goalsResult] = await Promise.all([
+          pool.query("select count(*)::int as count from messages where user_id = $1 and type <> 'tip'", [userId]),
+          pool.query(
+            `select distinct to_char(created_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD') as day
+             from messages where user_id = $1 and role = 'user' and type = 'response' order by day`,
+            [userId],
+          ),
+          pool.query("select count(*)::int as count from study_notes where user_id = $1", [userId]),
+          pool.query("select count(*)::int as count from wishlist_items where user_id = $1 and completed = true", [userId]),
+        ]);
+        return {
+          messageCount: messagesResult.rows[0]?.count ?? 0,
+          conversationDates: datesResult.rows.map((row) => row.day),
+          notesCount: notesResult.rows[0]?.count ?? 0,
+          completedGoals: goalsResult.rows[0]?.count ?? 0,
+        };
       },
     },
   };

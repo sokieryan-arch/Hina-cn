@@ -1,6 +1,7 @@
-import { HINA_SYSTEM_INSTRUCTION } from "../hinaPrompt.js";
+import { HINA_MOMENT_INSTRUCTION, HINA_SYSTEM_INSTRUCTION } from "../hinaPrompt.js";
 import { buildProactivePrompt } from "../proactive.js";
 import { normalizeLanguageTips } from "../../shared/languageTips.js";
+import { normalizeWishlistSuggestion } from "../space.js";
 import type {
   ChatMessageInput,
   LanguagePartnerProvider,
@@ -35,6 +36,7 @@ function parseHinaResponse(text: string): LanguagePartnerResponse {
         ? parsed.response.trim()
         : text,
       tips: normalizeLanguageTips(parsed.tips),
+      wishlistSuggestion: normalizeWishlistSuggestion(parsed.wishlistSuggestion),
     };
   } catch {
     return {
@@ -93,6 +95,39 @@ export class VolcengineArkProvider implements LanguagePartnerProvider, SpeechPro
 
   async draftProactiveOpener(input: Parameters<LanguagePartnerProvider["draftProactiveOpener"]>[0]) {
     return this.chat([{ role: "user", text: buildProactivePrompt(input) }]);
+  }
+
+  async draftMoment(input: Parameters<LanguagePartnerProvider["draftMoment"]>[0]) {
+    if (!this.apiKey) throw new Error("missing_ark_api_key");
+    if (!this.chatModel) throw new Error("missing_ark_chat_model");
+    const response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: [
+        ["Authorization", `Bearer ${this.apiKey}`],
+        ["Content-Type", "application/json"],
+      ],
+      body: JSON.stringify({
+        model: this.chatModel,
+        messages: [
+          { role: "system", content: HINA_MOMENT_INSTRUCTION },
+          {
+            role: "user",
+            content: `New York local date: ${input.localDate}\nOccasion: ${input.occasion ?? "none"}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.9,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(`ark_moment_failed:${response.status}`);
+    const parsed = JSON.parse(extractText(payload)) as Record<string, unknown>;
+    const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
+    if (!body) throw new Error("ark_moment_empty");
+    return {
+      body,
+      occasion: typeof parsed.occasion === "string" ? parsed.occasion : input.occasion ?? null,
+    };
   }
 
   async speak(text: string): Promise<SpeechResponse | null> {

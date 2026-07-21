@@ -1,7 +1,9 @@
 export type LanguageTipType = "correction" | "expression" | "culture";
+export type StudyCategory = "grammar" | "vocabulary" | "expression" | "culture";
 
 export interface LanguageTip {
   type: LanguageTipType;
+  studyCategory?: StudyCategory;
   title: string;
   body: string;
   example?: string;
@@ -76,6 +78,9 @@ function normalizeTip(value: unknown, index: number): LanguageTip | null {
     body,
   };
 
+  const studyCategory = normalizeStudyCategory(source.studyCategory, type);
+  if (studyCategory) tip.studyCategory = studyCategory;
+
   const example = truncate(source.example, 180);
   const original = truncate(source.original, 180);
   const suggestion = truncate(source.suggestion, 180);
@@ -85,6 +90,17 @@ function normalizeTip(value: unknown, index: number): LanguageTip | null {
   if (suggestion) tip.suggestion = suggestion;
 
   return tip;
+}
+
+function normalizeStudyCategory(value: unknown, type: LanguageTipType): StudyCategory {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["grammar", "vocabulary", "expression", "culture"].includes(normalized)) {
+      return normalized as StudyCategory;
+    }
+  }
+  if (type === "correction") return "grammar";
+  return type;
 }
 
 export function normalizeLanguageTips(input: unknown): LanguageTip[] {
