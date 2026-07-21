@@ -304,7 +304,7 @@ export default function App() {
                 }}
                 placeholder={chatPlaceholder}
                 aria-label="Message Hina"
-                className="flex-1 h-10 min-h-10 max-h-10 overflow-y-auto bg-transparent border-0 resize-none py-2.5 px-4 focus:outline-none text-[15px] leading-5 placeholder:whitespace-nowrap placeholder:text-[14px] placeholder:transition-opacity focus:placeholder:opacity-0 placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
+                className="flex-1 h-10 min-h-10 max-h-10 overflow-hidden bg-transparent border-0 resize-none py-2.5 px-4 focus:outline-none text-[15px] leading-5 placeholder:whitespace-nowrap placeholder:text-[14px] placeholder:transition-opacity focus:placeholder:opacity-0 placeholder-[#B5A48B] dark:placeholder-[#89739c] text-[#4A4A4A] dark:text-[#e5dceb]"
                 rows={1}
                 disabled={isGenerating}
               />
