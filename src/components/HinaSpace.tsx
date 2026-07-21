@@ -69,10 +69,10 @@ const SPACE_ITEMS = [
   },
 ];
 
-function PageShell({ children }: { children: React.ReactNode }) {
+function PageShell({ children, centered = false }: { children: React.ReactNode; centered?: boolean }) {
   return (
-    <main className="flex-1 overflow-y-auto bg-[#FDFBF7] dark:bg-[#1c1224] px-4 py-6 sm:px-7 sm:py-8">
-      <div className="mx-auto w-full max-w-4xl">{children}</div>
+    <main className={`flex-1 overflow-y-auto bg-[#FDFBF7] dark:bg-[#1c1224] px-4 py-6 sm:px-7 sm:py-8 ${centered ? "flex flex-col" : ""}`}>
+      <div className={`mx-auto w-full max-w-4xl ${centered ? "my-auto" : ""}`}>{children}</div>
     </main>
   );
 }
@@ -89,7 +89,7 @@ function EmptyState({ icon, title, copy }: { icon: React.ReactNode; title: strin
 
 function SpaceHome({ onNavigate }: Pick<HinaSpaceProps, "onNavigate">) {
   return (
-    <PageShell>
+    <PageShell centered>
       <div className="grid grid-cols-2 gap-4 sm:gap-5" data-space-grid>
         {SPACE_ITEMS.map((item, index) => (
           <motion.button

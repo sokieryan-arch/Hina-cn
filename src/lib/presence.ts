@@ -13,20 +13,21 @@ export type PresenceStatus =
 export interface PresenceDefinition {
   label: string;
   dotClass: string;
+  showsIndicator: boolean;
   textClass: string;
 }
 
 export const PRESENCE_DEFINITIONS: Record<PresenceStatus, PresenceDefinition> = {
-  online: { label: "Online", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  sleeping: { label: "🌙 Sleeping", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  coffee: { label: "☕ Making coffee", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  reading: { label: "📚 Reading", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  drawing: { label: "🎨 Drawing", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  walking: { label: "🚶 Walking", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  daydreaming: { label: "💭 Daydreaming", dotClass: "bg-[#21A366]", textClass: "text-[#347759] dark:text-[#7ed9a8]" },
-  preparing: { label: "Preparing", dotClass: "bg-[#54B9E8]", textClass: "text-[#2982A8] dark:text-[#8bd8f7]" },
-  thinking: { label: "Thinking", dotClass: "bg-[#2457A7]", textClass: "text-[#2457A7] dark:text-[#8eb5f4]" },
-  speaking: { label: "Speaking", dotClass: "bg-[#F29A38]", textClass: "text-[#B96516] dark:text-[#ffc27c]" },
+  online: { label: "Online", dotClass: "bg-[#21A366]", showsIndicator: true, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  sleeping: { label: "🌙 Sleeping", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  coffee: { label: "☕ Making coffee", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  reading: { label: "📚 Reading", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  drawing: { label: "🎨 Drawing", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  walking: { label: "🚶 Walking", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  daydreaming: { label: "💭 Daydreaming", dotClass: "bg-[#21A366]", showsIndicator: false, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  preparing: { label: "Preparing", dotClass: "bg-[#54B9E8]", showsIndicator: true, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  thinking: { label: "Thinking", dotClass: "bg-[#2457A7]", showsIndicator: true, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
+  speaking: { label: "Speaking", dotClass: "bg-[#F29A38]", showsIndicator: true, textClass: "text-[#8A817C] dark:text-[#a58ebd]" },
 };
 
 function newYorkParts(now: Date) {

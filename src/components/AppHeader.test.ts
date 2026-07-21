@@ -35,3 +35,9 @@ test("Hina avatar follows light and dark themes", () => {
   assert.match(render("chat", "light"), /data-hina-avatar="sun"/);
   assert.match(render("chat", "dark"), /data-hina-avatar="moon"/);
 });
+
+test("emoji ambient status stays gray and does not add a separate indicator", () => {
+  const markup = render("chat");
+  assert.match(markup, /text-\[#8A817C\]/);
+  assert.doesNotMatch(markup, /bg-\[#21A366\]/);
+});

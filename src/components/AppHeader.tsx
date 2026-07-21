@@ -54,7 +54,7 @@ export function AppHeader({
           <span>
             <span className="block font-bold text-lg text-[#2D2D2D] dark:text-white leading-tight tracking-normal">Hina</span>
             <span className={`text-xs font-medium flex items-center mt-0.5 ${definition.textClass}`}>
-              <span className={`w-2 h-2 rounded-full inline-block mr-1.5 ${definition.dotClass}`} />
+              {definition.showsIndicator && <span className={`w-2 h-2 rounded-full inline-block mr-1.5 ${definition.dotClass}`} />}
               {definition.label}
             </span>
           </span>

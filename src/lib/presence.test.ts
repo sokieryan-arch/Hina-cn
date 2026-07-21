@@ -19,9 +19,20 @@ test("activity priority is speaking then thinking then preparing", () => {
   assert.equal(resolvePresence({ ambient: "online", preparing: true, thinking: true, speaking: true }), "speaking");
 });
 
-test("ambient statuses are green and activity statuses use their requested colors", () => {
-  assert.match(PRESENCE_DEFINITIONS.reading.dotClass, /21A366/);
+test("status indicators keep their requested colors while all labels stay gray", () => {
+  assert.match(PRESENCE_DEFINITIONS.online.dotClass, /21A366/);
   assert.match(PRESENCE_DEFINITIONS.preparing.dotClass, /54B9E8/);
   assert.match(PRESENCE_DEFINITIONS.thinking.dotClass, /2457A7/);
   assert.match(PRESENCE_DEFINITIONS.speaking.dotClass, /F29A38/);
+  assert.ok(Object.values(PRESENCE_DEFINITIONS).every((definition) => definition.textClass.includes("8A817C")));
+});
+
+test("emoji ambient statuses do not render a separate indicator", () => {
+  assert.equal(PRESENCE_DEFINITIONS.online.showsIndicator, true);
+  assert.equal(PRESENCE_DEFINITIONS.preparing.showsIndicator, true);
+  assert.equal(PRESENCE_DEFINITIONS.thinking.showsIndicator, true);
+  assert.equal(PRESENCE_DEFINITIONS.speaking.showsIndicator, true);
+  for (const status of ["sleeping", "coffee", "reading", "drawing", "walking", "daydreaming"] as const) {
+    assert.equal(PRESENCE_DEFINITIONS[status].showsIndicator, false);
+  }
 });
