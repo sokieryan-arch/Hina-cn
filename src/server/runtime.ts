@@ -1,5 +1,6 @@
 import { createAuthService } from "./auth/authService.js";
 import { createWeChatOAuth } from "./auth/wechat.js";
+import { createWeChatMiniAuth } from "./auth/wechatMini.js";
 import { createRedisVerificationStore } from "./cache/redisVerificationStore.js";
 import { validateRuntimeEnv } from "./config.js";
 import { getRuntimeEnvironment } from "./runtimeEnv.js";
@@ -14,6 +15,7 @@ import type { AppStore } from "./store/types.js";
 import type { LanguagePartnerProvider, SpeechProvider } from "./providers/types.js";
 import pg from "pg";
 import { createClient } from "redis";
+import { createWeChatContentSafety } from "./wechatContentSafety.js";
 
 const { Pool } = pg;
 
@@ -23,7 +25,10 @@ async function createStore(): Promise<AppStore> {
     : createMemoryAppStore();
 
   if (process.env.REDIS_URL) {
-    store.auth.verifications = await createRedisVerificationStore(process.env.REDIS_URL);
+    store.auth.verifications = await createRedisVerificationStore(
+      process.env.REDIS_URL,
+      process.env.REDIS_KEY_PREFIX || "hina",
+    );
   }
 
   return store;
@@ -61,6 +66,8 @@ export async function createRuntime() {
     wechat: createWeChatOAuth({
       stateStore: new Map(),
     }),
+    wechatMini: createWeChatMiniAuth(),
+    wechatContentSafety: createWeChatContentSafety(),
     chatLimiter: createRateLimiter({
       limit: Number(process.env.CHAT_RATE_LIMIT_PER_MINUTE || 30),
       windowMs: 60 * 1000,

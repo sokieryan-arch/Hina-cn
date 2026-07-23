@@ -144,6 +144,16 @@ export function createAuthService(options: AuthServiceOptions) {
       return { ok: true };
     },
 
+    async verifyIdentifierCode(input: {
+      identifier: string;
+      code: string;
+      purpose: VerificationPurpose;
+    }) {
+      const identifier = parseIdentifier(input.identifier);
+      await verifyCode(identifier, input.purpose, input.code);
+      return identifier;
+    },
+
     async getCurrentUser(token: string | undefined | null) {
       if (!token) return null;
       const session = await options.stores.sessions.find(token);

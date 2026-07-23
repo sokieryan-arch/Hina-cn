@@ -1,11 +1,16 @@
 import { createClient } from "redis";
 import type { VerificationPurpose, VerificationRecord, VerificationStore } from "../auth/types.js";
 
-export async function createRedisVerificationStore(redisUrl: string): Promise<VerificationStore> {
+export async function createRedisVerificationStore(
+  redisUrl: string,
+  keyPrefix = "hina",
+): Promise<VerificationStore> {
   const client = createClient({ url: redisUrl });
   await client.connect();
 
-  const keyFor = (target: string, purpose: VerificationPurpose) => `hina:verification:${purpose}:${target}`;
+  const normalizedPrefix = keyPrefix.trim().replace(/:+$/, "") || "hina";
+  const keyFor = (target: string, purpose: VerificationPurpose) =>
+    `${normalizedPrefix}:verification:${purpose}:${target}`;
 
   return {
     async save(record: VerificationRecord) {

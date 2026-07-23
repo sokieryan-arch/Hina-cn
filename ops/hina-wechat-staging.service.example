@@ -1,0 +1,26 @@
+[Unit]
+Description=Hina WeChat Staging API
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hina
+Group=hina
+WorkingDirectory=/opt/Hina-cn-wechat-staging
+EnvironmentFile=/etc/hina/wechat-staging.env
+ExecStart=/usr/local/bin/node /opt/Hina-cn-wechat-staging/dist/server.cjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/Hina-cn-wechat-staging/uploads
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

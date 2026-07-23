@@ -52,6 +52,15 @@ export function createMemoryAuthStores(): AuthStores {
         users.set(user.id, user);
         return user;
       },
+      async delete(userId) {
+        users.delete(userId);
+        for (const [key, linkedUserId] of external.entries()) {
+          if (linkedUserId === userId) external.delete(key);
+        }
+        for (const [token, session] of sessions.entries()) {
+          if (session.userId === userId) sessions.delete(token);
+        }
+      },
       async updatePassword(userId, passwordHash) {
         const user = users.get(userId);
         if (!user) throw new Error("user_not_found");
@@ -70,11 +79,31 @@ export function createMemoryAuthStores(): AuthStores {
         const userId = external.get(`${provider}:${providerUserId}`);
         return userId ? users.get(userId) ?? null : null;
       },
+      async findExternalIdentityByUser(userId, provider) {
+        const prefix = `${provider}:`;
+        for (const [key, linkedUserId] of external.entries()) {
+          if (linkedUserId === userId && key.startsWith(prefix)) {
+            return { providerUserId: key.slice(prefix.length), unionId: null };
+          }
+        }
+        return null;
+      },
+      async reassignExternalIdentities(sourceUserId, targetUserId) {
+        for (const [key, linkedUserId] of external.entries()) {
+          if (linkedUserId === sourceUserId) external.set(key, targetUserId);
+        }
+        const target = users.get(targetUserId);
+        if (target) {
+          target.hasWeChat = Array.from(external.entries()).some(
+            ([key, userId]) => userId === targetUserId && (key.startsWith("wechat:") || key.startsWith("wechat_mini:")),
+          );
+        }
+      },
       async linkExternalIdentity(input) {
         const user = users.get(input.userId);
         if (!user) throw new Error("user_not_found");
         external.set(`${input.provider}:${input.providerUserId}`, input.userId);
-        user.hasWeChat = input.provider === "wechat" || user.hasWeChat;
+        user.hasWeChat = input.provider === "wechat" || input.provider === "wechat_mini" || user.hasWeChat;
       },
     },
     verifications: {

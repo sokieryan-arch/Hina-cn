@@ -97,6 +97,24 @@ export interface RelationshipCounts {
   completedGoals: number;
 }
 
+export interface UserSafetyProfileRecord {
+  userId: string;
+  birthDate: string;
+  adultConfirmed: boolean;
+  privacyVersion: string;
+  consentedAt: Date;
+  updatedAt: Date;
+}
+
+export interface FeedbackRecord {
+  id: string;
+  userId: string;
+  category: "bug" | "safety" | "privacy" | "other";
+  message: string;
+  contact?: string | null;
+  createdAt: Date;
+}
+
 export interface SpaceStore {
   listMoments(limit?: number): Promise<HinaMomentRecord[]>;
   latestMoment(): Promise<HinaMomentRecord | null>;
@@ -120,10 +138,20 @@ export interface SpaceStore {
   getRelationshipCounts(userId: string): Promise<RelationshipCounts>;
 }
 
+export interface AccountStore {
+  getSafetyProfile(userId: string): Promise<UserSafetyProfileRecord | null>;
+  saveSafetyProfile(input: Omit<UserSafetyProfileRecord, "consentedAt" | "updatedAt">): Promise<UserSafetyProfileRecord>;
+  createFeedback(input: Omit<FeedbackRecord, "id" | "createdAt">): Promise<FeedbackRecord>;
+  exportUserData(userId: string): Promise<Record<string, unknown>>;
+  mergeUsers(sourceUserId: string, targetUserId: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
+}
+
 export interface AppStore {
   auth: AuthStores;
   messages: MessageStore;
   proactive: ProactiveSettingsStore;
   billing: BillingStore;
   space: SpaceStore;
+  account: AccountStore;
 }

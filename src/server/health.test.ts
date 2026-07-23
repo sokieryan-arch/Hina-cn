@@ -111,3 +111,28 @@ test("reports email configuration status without secret values", async () => {
   assert.equal(serialized.includes("smtp-secret"), false);
   assert.equal(serialized.includes("mailer@example.cn"), false);
 });
+
+test("reports Mini Program readiness without exposing the AppSecret", async () => {
+  const health = await buildHealthStatus({
+    env: {
+      APP_ENV: "production",
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://user:secret-pass@db.example.cn/hina",
+      REDIS_URL: "redis://:secret-pass@redis.example.cn:6379",
+      ARK_API_KEY: "ark-secret-value",
+      ARK_CHAT_MODEL: "doubao-model",
+      SMTP_HOST: "smtp.example.cn",
+      SMTP_USER: "mailer@example.cn",
+      SMTP_PASS: "smtp-secret",
+      WECHAT_MINI_APP_ID: "mini-app-id",
+      WECHAT_MINI_APP_SECRET: "mini-app-secret",
+      WECHAT_CONTENT_SECURITY_ENABLED: "true",
+    },
+  });
+
+  assert.equal(health.wechatMini.configured, true);
+  assert.equal(health.wechatMini.contentSafetyEnabled, true);
+  assert.equal(health.wechatMini.ok, true);
+  assert.equal(JSON.stringify(health).includes("mini-app-secret"), false);
+  assert.equal(JSON.stringify(health).includes("mini-app-id"), false);
+});

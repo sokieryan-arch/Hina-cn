@@ -152,7 +152,8 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
         async findById(id) {
           const result = await pool.query(
             `select u.*, exists(
-              select 1 from external_identities e where e.user_id = u.id and e.provider = 'wechat'
+              select 1 from external_identities e
+              where e.user_id = u.id and e.provider in ('wechat', 'wechat_mini')
             ) as has_wechat from users u where u.id = $1`,
             [id],
           );
@@ -162,7 +163,8 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           const column = identifier.kind === "email" ? "email" : "phone";
           const result = await pool.query(
             `select u.*, exists(
-              select 1 from external_identities e where e.user_id = u.id and e.provider = 'wechat'
+              select 1 from external_identities e
+              where e.user_id = u.id and e.provider in ('wechat', 'wechat_mini')
             ) as has_wechat from users u where ${column} = $1`,
             [identifier.value],
           );
@@ -188,6 +190,9 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           );
           return rowToUser(result.rows[0]);
         },
+        async delete(userId) {
+          await pool.query("delete from users where id = $1", [userId]);
+        },
         async updatePassword(userId, passwordHash) {
           await pool.query(
             "update users set password_hash = $2, updated_at = now() where id = $1",
@@ -203,7 +208,8 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
                  updated_at = now()
              where id = $1
              returning *, exists(
-               select 1 from external_identities e where e.user_id = users.id and e.provider = 'wechat'
+               select 1 from external_identities e
+               where e.user_id = users.id and e.provider in ('wechat', 'wechat_mini')
              ) as has_wechat`,
             [userId, patch.displayName ?? null, hasAvatarPatch, patch.avatarUrl ?? null],
           );
@@ -219,12 +225,37 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           );
           return result.rows[0] ? rowToUser(result.rows[0]) : null;
         },
+        async findExternalIdentityByUser(userId, provider) {
+          const result = await pool.query(
+            `select provider_user_id, union_id
+             from external_identities
+             where user_id = $1 and provider = $2
+             order by created_at asc
+             limit 1`,
+            [userId, provider],
+          );
+          return result.rows[0]
+            ? {
+              providerUserId: result.rows[0].provider_user_id,
+              unionId: result.rows[0].union_id,
+            }
+            : null;
+        },
+        async reassignExternalIdentities(sourceUserId, targetUserId) {
+          await pool.query(
+            "update external_identities set user_id = $2 where user_id = $1",
+            [sourceUserId, targetUserId],
+          );
+        },
         async linkExternalIdentity(input) {
           await pool.query(
             `insert into external_identities (id, user_id, provider, provider_user_id, union_id, raw_profile)
              values ($1, $2, $3, $4, $5, $6)
              on conflict (provider, provider_user_id)
-             do update set union_id = excluded.union_id, raw_profile = excluded.raw_profile`,
+             do update set
+               user_id = excluded.user_id,
+               union_id = excluded.union_id,
+               raw_profile = excluded.raw_profile`,
             [
               nanoid(),
               input.userId,
@@ -539,6 +570,237 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
           notesCount: notesResult.rows[0]?.count ?? 0,
           completedGoals: goalsResult.rows[0]?.count ?? 0,
         };
+      },
+    },
+    account: {
+      async getSafetyProfile(userId) {
+        const result = await pool.query(
+          "select * from user_safety_profiles where user_id = $1",
+          [userId],
+        );
+        const row = result.rows[0];
+        return row
+          ? {
+            userId: row.user_id,
+            birthDate: String(row.birth_date).slice(0, 10),
+            adultConfirmed: row.adult_confirmed,
+            privacyVersion: row.privacy_version,
+            consentedAt: row.consented_at,
+            updatedAt: row.updated_at,
+          }
+          : null;
+      },
+      async saveSafetyProfile(input) {
+        const result = await pool.query(
+          `insert into user_safety_profiles (
+             user_id, birth_date, adult_confirmed, privacy_version, consented_at, updated_at
+           ) values ($1, $2, $3, $4, now(), now())
+           on conflict (user_id) do update set
+             birth_date = excluded.birth_date,
+             adult_confirmed = excluded.adult_confirmed,
+             privacy_version = excluded.privacy_version,
+             consented_at = now(),
+             updated_at = now()
+           returning *`,
+          [input.userId, input.birthDate, input.adultConfirmed, input.privacyVersion],
+        );
+        const row = result.rows[0];
+        return {
+          userId: row.user_id,
+          birthDate: String(row.birth_date).slice(0, 10),
+          adultConfirmed: row.adult_confirmed,
+          privacyVersion: row.privacy_version,
+          consentedAt: row.consented_at,
+          updatedAt: row.updated_at,
+        };
+      },
+      async createFeedback(input) {
+        const result = await pool.query(
+          `insert into feedback_reports (id, user_id, category, message, contact)
+           values ($1, $2, $3, $4, $5)
+           returning *`,
+          [nanoid(), input.userId, input.category, input.message, input.contact ?? null],
+        );
+        const row = result.rows[0];
+        return {
+          id: row.id,
+          userId: row.user_id,
+          category: row.category,
+          message: row.message,
+          contact: row.contact,
+          createdAt: row.created_at,
+        };
+      },
+      async exportUserData(userId) {
+        const [
+          userResult,
+          identitiesResult,
+          messagesResult,
+          proactiveResult,
+          notesResult,
+          wishlistResult,
+          capsulesResult,
+          safetyResult,
+          feedbackResult,
+        ] = await Promise.all([
+          pool.query(
+            `select id, display_name, avatar_url, phone, email,
+                    phone_verified_at, email_verified_at, created_at, updated_at
+             from users where id = $1`,
+            [userId],
+          ),
+          pool.query(
+            `select provider, provider_user_id, union_id, created_at
+             from external_identities where user_id = $1 order by created_at asc`,
+            [userId],
+          ),
+          pool.query("select * from messages where user_id = $1 order by created_at asc", [userId]),
+          pool.query("select * from proactive_settings where user_id = $1", [userId]),
+          pool.query("select * from study_notes where user_id = $1 order by created_at asc", [userId]),
+          pool.query("select * from wishlist_items where user_id = $1 order by created_at asc", [userId]),
+          pool.query("select * from time_capsules where user_id = $1 order by created_at asc", [userId]),
+          pool.query("select * from user_safety_profiles where user_id = $1", [userId]),
+          pool.query(
+            "select id, category, message, contact, created_at from feedback_reports where user_id = $1 order by created_at asc",
+            [userId],
+          ),
+        ]);
+        if (!userResult.rows[0]) throw new Error("user_not_found");
+        return {
+          exportedAt: new Date().toISOString(),
+          user: userResult.rows[0],
+          externalIdentities: identitiesResult.rows,
+          messages: messagesResult.rows,
+          proactiveSettings: proactiveResult.rows[0] ?? null,
+          billing: await getBillingSummary(userId),
+          studyNotes: notesResult.rows,
+          wishlist: wishlistResult.rows,
+          capsules: capsulesResult.rows,
+          safetyProfile: safetyResult.rows[0] ?? null,
+          feedback: feedbackResult.rows,
+        };
+      },
+      async mergeUsers(sourceUserId, targetUserId) {
+        if (sourceUserId === targetUserId) return;
+        const client = await pool.connect();
+        try {
+          await client.query("begin");
+          const users = await client.query(
+            "select id from users where id = any($1::text[]) for update",
+            [[sourceUserId, targetUserId]],
+          );
+          if (users.rowCount !== 2) throw new Error("user_not_found");
+
+          await client.query(
+            `delete from study_notes source
+             where source.user_id = $1
+               and exists (
+                 select 1 from study_notes target
+                 where target.user_id = $2 and target.dedupe_key = source.dedupe_key
+               )`,
+            [sourceUserId, targetUserId],
+          );
+          await client.query("update messages set user_id = $2 where user_id = $1", [sourceUserId, targetUserId]);
+          await client.query("update study_notes set user_id = $2 where user_id = $1", [sourceUserId, targetUserId]);
+          await client.query("update wishlist_items set user_id = $2 where user_id = $1", [sourceUserId, targetUserId]);
+          await client.query("update time_capsules set user_id = $2 where user_id = $1", [sourceUserId, targetUserId]);
+          await client.query("update feedback_reports set user_id = $2 where user_id = $1", [sourceUserId, targetUserId]);
+
+          const proactiveRows = await client.query(
+            "select * from proactive_settings where user_id = any($1::text[])",
+            [[sourceUserId, targetUserId]],
+          );
+          const sourceProactive = proactiveRows.rows.find((row) => row.user_id === sourceUserId);
+          const targetProactive = proactiveRows.rows.find((row) => row.user_id === targetUserId);
+          if (sourceProactive && targetProactive) {
+            const topics = Array.from(new Set([
+              ...(targetProactive.favorite_topics ?? []),
+              ...(sourceProactive.favorite_topics ?? []),
+            ])).slice(0, 5);
+            await client.query(
+              `update proactive_settings set
+                 enabled = $2,
+                 favorite_topics = $3,
+                 last_nudge_at = greatest(last_nudge_at, $4),
+                 updated_at = now()
+               where user_id = $1`,
+              [
+                targetUserId,
+                targetProactive.enabled || sourceProactive.enabled,
+                topics,
+                sourceProactive.last_nudge_at,
+              ],
+            );
+            await client.query("delete from proactive_settings where user_id = $1", [sourceUserId]);
+          } else if (sourceProactive) {
+            await client.query(
+              "update proactive_settings set user_id = $2 where user_id = $1",
+              [sourceUserId, targetUserId],
+            );
+          }
+
+          await client.query(
+            `insert into usage_daily (user_id, usage_date, chat_count)
+             select $2, usage_date, chat_count from usage_daily where user_id = $1
+             on conflict (user_id, usage_date) do update set
+               chat_count = usage_daily.chat_count + excluded.chat_count,
+               updated_at = now()`,
+            [sourceUserId, targetUserId],
+          );
+          await client.query("delete from usage_daily where user_id = $1", [sourceUserId]);
+
+          const entitlementRows = await client.query(
+            "select * from user_entitlements where user_id = any($1::text[])",
+            [[sourceUserId, targetUserId]],
+          );
+          const sourceEntitlement = entitlementRows.rows.find((row) => row.user_id === sourceUserId);
+          const targetEntitlement = entitlementRows.rows.find((row) => row.user_id === targetUserId);
+          if (sourceEntitlement && !targetEntitlement) {
+            await client.query(
+              "update user_entitlements set user_id = $2 where user_id = $1",
+              [sourceUserId, targetUserId],
+            );
+          } else if (sourceEntitlement && targetEntitlement) {
+            if (sourceEntitlement.plan === "pro" && targetEntitlement.plan !== "pro") {
+              await client.query(
+                `update user_entitlements
+                 set plan = 'pro', pro_expires_at = $2, updated_at = now()
+                 where user_id = $1`,
+                [targetUserId, sourceEntitlement.pro_expires_at],
+              );
+            }
+            await client.query("delete from user_entitlements where user_id = $1", [sourceUserId]);
+          }
+
+          const targetSafety = await client.query(
+            "select 1 from user_safety_profiles where user_id = $1",
+            [targetUserId],
+          );
+          if (targetSafety.rowCount) {
+            await client.query("delete from user_safety_profiles where user_id = $1", [sourceUserId]);
+          } else {
+            await client.query(
+              "update user_safety_profiles set user_id = $2 where user_id = $1",
+              [sourceUserId, targetUserId],
+            );
+          }
+
+          await client.query(
+            "update external_identities set user_id = $2 where user_id = $1",
+            [sourceUserId, targetUserId],
+          );
+          await client.query("delete from sessions where user_id = $1", [sourceUserId]);
+          await client.query("delete from users where id = $1", [sourceUserId]);
+          await client.query("commit");
+        } catch (error) {
+          await client.query("rollback").catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
+      async deleteUser(userId) {
+        await pool.query("delete from users where id = $1", [userId]);
       },
     },
   };
