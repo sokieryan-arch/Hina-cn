@@ -39,3 +39,15 @@ test("tip avatars stay semantic instead of following theme", () => {
   assert.match(correctionMarkup, /data-hina-avatar="correction"/);
   assert.match(expressionMarkup, /data-hina-avatar="expression"/);
 });
+
+test("Hina voice control is available without a universal hover-only class", () => {
+  const markup = renderToStaticMarkup(React.createElement(ChatMessage, {
+    message: baseMessage,
+    onPlayAudio: () => undefined,
+  }));
+
+  assert.match(markup, /aria-label="Play Hina&#x27;s voice"/);
+  assert.match(markup, /hina-audio-button/);
+  assert.match(markup, /data-speaking="false"/);
+  assert.doesNotMatch(markup, /opacity-0/);
+});

@@ -31,3 +31,19 @@ input,
 textarea {
   font: inherit;
 }
+
+.hina-audio-button {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hina-message-bubble .hina-audio-button {
+    opacity: 0;
+  }
+
+  .hina-message-bubble:hover .hina-audio-button,
+  .hina-message-bubble .hina-audio-button:focus-visible,
+  .hina-message-bubble .hina-audio-button[data-speaking="true"] {
+    opacity: 1;
+  }
+}

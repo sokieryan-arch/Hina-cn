@@ -91,7 +91,7 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, th
       </div>
 
       <div className="space-y-2">
-        <div className={cn("relative text-[15px] leading-relaxed font-sans group", bgClass)}>
+        <div className={cn("hina-message-bubble relative text-[15px] leading-relaxed font-sans", bgClass)}>
           {isCorrectionTip && <p className="text-sm font-medium mb-1 italic">Just a tiny tip...</p>}
           {isExpressionTip && (
             <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-80">
@@ -103,13 +103,15 @@ export function ChatMessage({ message, isSpeaking, onPlayAudio, userPhotoUrl, th
           {!isUser && onPlayAudio && !isTip && (
             <button
               onClick={onPlayAudio}
+              aria-label={isSpeaking ? "Playing Hina's voice" : "Play Hina's voice"}
+              data-speaking={isSpeaking ? "true" : "false"}
               className={cn(
-                "absolute -right-8 bottom-0 p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100",
-                isSpeaking && "text-[#FF9F1C] dark:text-[#a58ebd] opacity-100",
+                "hina-audio-button absolute -right-11 bottom-0 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all",
+                isSpeaking && "text-[#FF9F1C] dark:text-[#a58ebd]",
               )}
-              title="Play AI Voice"
+              title={isSpeaking ? "Playing Hina's voice" : "Play Hina's voice"}
             >
-              <Volume2 size={16} />
+              <Volume2 size={18} />
             </button>
           )}
         </div>
