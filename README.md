@@ -33,6 +33,7 @@ Optional but recommended for test deployment:
 
 - `REDIS_URL`
 - `APP_URL`
+- `VOLCENGINE_TTS_API_KEY`, `VOLCENGINE_TTS_RESOURCE_ID`, and `VOLCENGINE_TTS_VOICE_TYPE`
 - `WECHAT_APP_ID` and `WECHAT_APP_SECRET`
 
 Health check:
@@ -46,6 +47,24 @@ curl http://localhost:3000/api/health
 Email registration, login, and password reset are the first production-ready auth path. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` before enabling production email verification.
 
 Phone verification is intentionally unavailable until Volcengine SMS sign name and template approval are complete. WeChat login requires a public HTTPS domain and an approved WeChat Open Platform website application.
+
+### Text to speech
+
+Hina uses Volcengine Doubao Voice TTS 2.0 through the V3 HTTP endpoint. Create an
+API Key in Doubao Voice `API Key 管理`, keep it only on the server, and configure:
+
+```dotenv
+VOLCENGINE_TTS_API_KEY="replace-with-doubao-voice-api-key"
+VOLCENGINE_TTS_ENDPOINT="https://openspeech.bytedance.com/api/v3/tts/unidirectional"
+VOLCENGINE_TTS_RESOURCE_ID="seed-tts-2.0"
+VOLCENGINE_TTS_VOICE_TYPE="zh_female_vv_uranus_bigtts"
+VOLCENGINE_TTS_ENCODING="mp3"
+VOLCENGINE_TTS_SAMPLE_RATE="24000"
+VOLCENGINE_TTS_SPEED_RATIO="1"
+```
+
+The default Vivi 2.0 voice supports Chinese and English. AppID and Access Token
+remain supported only as a legacy V1 fallback.
 
 For the current low-cost single-ECS path, use `docs/production-single-ecs.md`.
 Docker and managed-resource Volcengine deployment notes live in `docs/deploy-volcengine.md`.

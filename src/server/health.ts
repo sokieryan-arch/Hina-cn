@@ -11,8 +11,10 @@ interface HealthEnv {
   SMTP_HOST?: string;
   SMTP_USER?: string;
   SMTP_PASS?: string;
+  VOLCENGINE_TTS_API_KEY?: string;
   VOLCENGINE_TTS_APP_ID?: string;
   VOLCENGINE_TTS_ACCESS_TOKEN?: string;
+  VOLCENGINE_TTS_RESOURCE_ID?: string;
   VOLCENGINE_TTS_VOICE_TYPE?: string;
 }
 
@@ -78,14 +80,27 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
     };
   const email = getEmailHealth(env);
   const speechValues = [
+    env.VOLCENGINE_TTS_API_KEY,
     env.VOLCENGINE_TTS_APP_ID,
     env.VOLCENGINE_TTS_ACCESS_TOKEN,
+    env.VOLCENGINE_TTS_RESOURCE_ID,
     env.VOLCENGINE_TTS_VOICE_TYPE,
   ];
   const hasAnySpeechConfig = speechValues.some(Boolean);
-  const hasCompleteSpeechConfig = speechValues.every(Boolean);
+  const hasV3SpeechConfig = Boolean(
+    env.VOLCENGINE_TTS_API_KEY
+      && env.VOLCENGINE_TTS_RESOURCE_ID
+      && env.VOLCENGINE_TTS_VOICE_TYPE,
+  );
+  const hasV1SpeechConfig = Boolean(
+    env.VOLCENGINE_TTS_APP_ID
+      && env.VOLCENGINE_TTS_ACCESS_TOKEN
+      && env.VOLCENGINE_TTS_VOICE_TYPE,
+  );
+  const hasCompleteSpeechConfig = hasV3SpeechConfig || hasV1SpeechConfig;
   const speech = {
     provider: "volcengine" as const,
+    protocol: hasV3SpeechConfig ? "v3" as const : hasV1SpeechConfig ? "v1" as const : null,
     configured: hasCompleteSpeechConfig,
     ok: !hasAnySpeechConfig || hasCompleteSpeechConfig,
   };

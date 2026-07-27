@@ -133,14 +133,15 @@ test("reports optional TTS readiness without exposing speech credentials", async
       REDIS_URL: "",
       ARK_API_KEY: "",
       ARK_CHAT_MODEL: "",
-      VOLCENGINE_TTS_APP_ID: "speech-app-id",
-      VOLCENGINE_TTS_ACCESS_TOKEN: "speech-secret-token",
-      VOLCENGINE_TTS_VOICE_TYPE: "en_female_amanda_mars_bigtts",
+      VOLCENGINE_TTS_API_KEY: "speech-secret-api-key",
+      VOLCENGINE_TTS_RESOURCE_ID: "seed-tts-2.0",
+      VOLCENGINE_TTS_VOICE_TYPE: "zh_female_vv_uranus_bigtts",
     },
   });
 
   assert.equal(configuredSpeech.speech.configured, true);
   assert.equal(configuredSpeech.speech.ok, true);
-  assert.equal(JSON.stringify(configuredSpeech).includes("speech-secret-token"), false);
-  assert.equal(JSON.stringify(configuredSpeech).includes("speech-app-id"), false);
+  assert.equal(configuredSpeech.speech.protocol, "v3");
+  assert.equal(JSON.stringify(configuredSpeech).includes("speech-secret-api-key"), false);
+  assert.equal(JSON.stringify(configuredSpeech).includes("zh_female_vv_uranus_bigtts"), false);
 });
