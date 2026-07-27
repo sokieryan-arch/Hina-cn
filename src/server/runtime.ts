@@ -8,10 +8,11 @@ import { createRateLimiter } from "./rateLimit.js";
 import { createMomentService } from "./moments.js";
 import { DemoLanguagePartnerProvider } from "./providers/demoProvider.js";
 import { VolcengineArkProvider } from "./providers/arkProvider.js";
+import { VolcengineTtsProvider } from "./providers/volcengineTtsProvider.js";
 import { createMemoryAppStore } from "./store/memoryAppStore.js";
 import { createPostgresAppStore } from "./store/postgresAppStore.js";
 import type { AppStore } from "./store/types.js";
-import type { LanguagePartnerProvider, SpeechProvider } from "./providers/types.js";
+import type { LanguagePartnerProvider } from "./providers/types.js";
 import pg from "pg";
 import { createClient } from "redis";
 
@@ -29,7 +30,7 @@ async function createStore(): Promise<AppStore> {
   return store;
 }
 
-function createProvider(): LanguagePartnerProvider & SpeechProvider {
+function createProvider(): LanguagePartnerProvider {
   if (process.env.ARK_API_KEY && process.env.ARK_CHAT_MODEL) {
     return new VolcengineArkProvider();
   }
@@ -39,7 +40,7 @@ function createProvider(): LanguagePartnerProvider & SpeechProvider {
   }
 
   console.warn("ARK_API_KEY or ARK_CHAT_MODEL is missing. Using local demo provider.");
-  return new DemoLanguagePartnerProvider() as LanguagePartnerProvider & SpeechProvider;
+  return new DemoLanguagePartnerProvider();
 }
 
 export async function createRuntime() {
@@ -50,6 +51,7 @@ export async function createRuntime() {
     notifier: createCompositeNotifier(),
   });
   const provider = createProvider();
+  const speech = new VolcengineTtsProvider();
   const moments = createMomentService({ store, provider });
 
   return {
@@ -57,7 +59,7 @@ export async function createRuntime() {
     auth,
     provider,
     moments,
-    speech: provider,
+    speech,
     wechat: createWeChatOAuth({
       stateStore: new Map(),
     }),

@@ -11,6 +11,9 @@ interface HealthEnv {
   SMTP_HOST?: string;
   SMTP_USER?: string;
   SMTP_PASS?: string;
+  VOLCENGINE_TTS_APP_ID?: string;
+  VOLCENGINE_TTS_ACCESS_TOKEN?: string;
+  VOLCENGINE_TTS_VOICE_TYPE?: string;
 }
 
 interface CheckResult {
@@ -74,9 +77,21 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
       missing: ["ARK_API_KEY", "ARK_CHAT_MODEL"].filter((key) => !env[key as keyof HealthEnv]),
     };
   const email = getEmailHealth(env);
+  const speechValues = [
+    env.VOLCENGINE_TTS_APP_ID,
+    env.VOLCENGINE_TTS_ACCESS_TOKEN,
+    env.VOLCENGINE_TTS_VOICE_TYPE,
+  ];
+  const hasAnySpeechConfig = speechValues.some(Boolean);
+  const hasCompleteSpeechConfig = speechValues.every(Boolean);
+  const speech = {
+    provider: "volcengine" as const,
+    configured: hasCompleteSpeechConfig,
+    ok: !hasAnySpeechConfig || hasCompleteSpeechConfig,
+  };
 
   return {
-    ok: database.ok && redis.ok && model.ok && email.ok,
+    ok: database.ok && redis.ok && model.ok && email.ok && speech.ok,
     env: runtimeEnv.appEnv,
     nodeEnv: runtimeEnv.nodeEnv,
     uptimeSeconds: Math.floor(options.uptimeSeconds?.() ?? process.uptime()),
@@ -84,5 +99,6 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
     redis,
     model,
     email,
+    speech,
   };
 }

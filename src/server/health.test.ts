@@ -111,3 +111,36 @@ test("reports email configuration status without secret values", async () => {
   assert.equal(serialized.includes("smtp-secret"), false);
   assert.equal(serialized.includes("mailer@example.cn"), false);
 });
+
+test("reports optional TTS readiness without exposing speech credentials", async () => {
+  const missingSpeech = await buildHealthStatus({
+    env: {
+      NODE_ENV: "development",
+      DATABASE_URL: "",
+      REDIS_URL: "",
+      ARK_API_KEY: "",
+      ARK_CHAT_MODEL: "",
+    },
+  });
+
+  assert.equal(missingSpeech.speech.configured, false);
+  assert.equal(missingSpeech.speech.ok, true);
+
+  const configuredSpeech = await buildHealthStatus({
+    env: {
+      NODE_ENV: "development",
+      DATABASE_URL: "",
+      REDIS_URL: "",
+      ARK_API_KEY: "",
+      ARK_CHAT_MODEL: "",
+      VOLCENGINE_TTS_APP_ID: "speech-app-id",
+      VOLCENGINE_TTS_ACCESS_TOKEN: "speech-secret-token",
+      VOLCENGINE_TTS_VOICE_TYPE: "en_female_amanda_mars_bigtts",
+    },
+  });
+
+  assert.equal(configuredSpeech.speech.configured, true);
+  assert.equal(configuredSpeech.speech.ok, true);
+  assert.equal(JSON.stringify(configuredSpeech).includes("speech-secret-token"), false);
+  assert.equal(JSON.stringify(configuredSpeech).includes("speech-app-id"), false);
+});
