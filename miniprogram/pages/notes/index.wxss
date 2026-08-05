@@ -1,0 +1,29 @@
+.notes-page { padding: 0 28rpx; box-sizing: border-box; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24rpx; padding: 48rpx 8rpx 30rpx; }
+.page-header > view { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.page-header .display-title { margin-top: 12rpx; }
+.header-copy { margin-top: 20rpx; color: #756d66; font-size: 24rpx; line-height: 1.7; }
+.filter-scroll { width: calc(100% + 56rpx); margin-left: -28rpx; }
+.filter-row { display: flex; width: max-content; gap: 12rpx; padding: 12rpx 28rpx 26rpx; }
+.filter { width: auto; min-width: 110rpx; height: 64rpx; padding: 0 26rpx; border: 1rpx solid #dfd5c7; border-radius: 32rpx; background: #fffdf9; color: #7e756e; font-size: 23rpx; font-weight: 700; line-height: 62rpx; }
+.filter.active { border-color: #526357; background: #526357; color: #fff; }
+.notes-state { margin: 70rpx 10rpx; color: #817870; line-height: 1.8; text-align: center; }
+.empty-state { display: flex; padding: 70rpx 44rpx; flex-direction: column; align-items: center; }
+.empty-symbol { color: #b9686f; font-size: 70rpx; }
+.empty-title { margin: 18rpx 0 12rpx; color: #3e3935; font-family: Georgia, "Songti SC", serif; font-size: 34rpx; font-weight: 600; }
+.note-grid { display: flex; flex-direction: column; gap: 22rpx; }
+.note-card { padding: 30rpx; border: 1rpx solid #e0d5c7; border-radius: 30rpx; background: #fffdf9; box-shadow: 0 13rpx 34rpx rgba(68, 54, 37, .06); }
+.category-grammar { border-left: 8rpx solid #dc9b62; }
+.category-vocabulary { border-left: 8rpx solid #a7a578; }
+.category-expression { border-left: 8rpx solid #6e9d91; }
+.category-culture { border-left: 8rpx solid #b7889f; }
+.note-topline { display: flex; align-items: center; justify-content: space-between; }
+.note-category { color: #8e7c68; font-size: 18rpx; font-weight: 800; letter-spacing: 3rpx; text-transform: uppercase; }
+.delete-note { width: 52rpx; height: 52rpx; padding: 0; border-radius: 50%; background: transparent; color: #a79d95; font-size: 34rpx; line-height: 48rpx; }
+.note-title { display: block; margin-top: 8rpx; font-family: Georgia, "Songti SC", serif; font-size: 32rpx; font-weight: 600; }
+.note-body { display: block; margin-top: 16rpx; color: #625b56; font-size: 25rpx; line-height: 1.75; }
+.correction { display: flex; margin-top: 24rpx; padding: 22rpx; flex-direction: column; gap: 8rpx; border-radius: 20rpx; background: #f5f1e9; font-size: 24rpx; line-height: 1.55; }
+.old { color: #a06b69; text-decoration: line-through; }
+.arrow { color: #9c9289; }
+.new { color: #3d6b5c; font-weight: 700; }
+.example { display: block; margin-top: 22rpx; color: #6f665f; font-family: Georgia, serif; font-size: 25rpx; font-style: italic; line-height: 1.65; }

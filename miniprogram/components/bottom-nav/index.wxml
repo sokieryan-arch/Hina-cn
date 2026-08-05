@@ -1,0 +1,16 @@
+<view class="nav-wrap">
+  <view class="nav-pill">
+    <button class="nav-item {{current === 'chat' ? 'active' : ''}}" data-target="chat" bindtap="navigate">
+      <text class="nav-glyph">✦</text>
+      <text>对话</text>
+    </button>
+    <button class="nav-item {{current === 'notes' ? 'active' : ''}}" data-target="notes" bindtap="navigate">
+      <text class="nav-glyph">⌁</text>
+      <text>笔记</text>
+    </button>
+    <button class="nav-item {{current === 'profile' ? 'active' : ''}}" data-target="profile" bindtap="navigate">
+      <text class="nav-glyph">◌</text>
+      <text>我的</text>
+    </button>
+  </view>
+</view>

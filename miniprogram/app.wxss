@@ -1,0 +1,116 @@
+page {
+  --paper: #f8f3ea;
+  --paper-deep: #efe7da;
+  --ink: #302d2a;
+  --muted: #7d756e;
+  --line: #dfd5c7;
+  --moss: #526357;
+  --moss-dark: #37443d;
+  --sun: #f3ad3d;
+  --rose: #b9686f;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+}
+
+button::after {
+  border: 0;
+}
+
+.page-shell {
+  min-height: 100vh;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(243, 173, 61, 0.14), transparent 26%),
+    radial-gradient(circle at 92% 18%, rgba(82, 99, 87, 0.11), transparent 24%),
+    var(--paper);
+}
+
+.safe-top {
+  height: env(safe-area-inset-top);
+}
+
+.eyebrow {
+  color: #9a6d2f;
+  font-size: 21rpx;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+  text-transform: uppercase;
+}
+
+.display-title {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 54rpx;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -2rpx;
+}
+
+.card {
+  border: 1rpx solid rgba(108, 94, 77, 0.16);
+  border-radius: 34rpx;
+  background: rgba(255, 253, 249, 0.94);
+  box-shadow: 0 18rpx 50rpx rgba(68, 54, 37, 0.08);
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  min-height: 92rpx;
+  border-radius: 46rpx;
+  font-size: 29rpx;
+  font-weight: 700;
+  line-height: 92rpx;
+}
+
+.primary-button {
+  background: var(--moss-dark);
+  color: #fffdf8;
+  box-shadow: 0 14rpx 30rpx rgba(55, 68, 61, 0.2);
+}
+
+.primary-button[disabled] {
+  background: #a8aaa4;
+  color: #f4f1eb;
+  box-shadow: none;
+}
+
+.secondary-button {
+  border: 1rpx solid var(--line);
+  background: #fffdf9;
+  color: var(--ink);
+}
+
+.danger-button {
+  border: 1rpx solid #e9c9c8;
+  background: #fff7f6;
+  color: #a54d52;
+}
+
+.field {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 88rpx;
+  padding: 0 28rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 24rpx;
+  background: #fffdf9;
+  color: var(--ink);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 14rpx;
+  color: #655e58;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.bottom-safe-space {
+  height: calc(150rpx + env(safe-area-inset-bottom));
+}

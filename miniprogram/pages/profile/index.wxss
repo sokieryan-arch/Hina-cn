@@ -1,0 +1,28 @@
+.profile-page { padding: 0 28rpx; box-sizing: border-box; }
+.profile-hero { display: flex; align-items: center; gap: 30rpx; padding: 48rpx 8rpx 36rpx; }
+.hero-text { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.hero-text .display-title { margin-top: 10rpx; }
+.hero-subtitle { margin-top: 16rpx; color: #756d66; font-size: 24rpx; line-height: 1.7; }
+.loading { padding: 100rpx 20rpx; color: #817870; text-align: center; }
+.plan-card { position: relative; display: flex; min-height: 160rpx; padding: 32rpx; align-items: center; overflow: hidden; background: #37443d; color: #fffdf8; }
+.plan-card > view { display: flex; flex-direction: column; }
+.plan-label { color: #ebc77b; font-size: 19rpx; font-weight: 800; letter-spacing: 4rpx; }
+.plan-title { margin-top: 16rpx; font-family: Georgia, "Songti SC", serif; font-size: 34rpx; font-weight: 600; }
+.plan-orbit { position: absolute; right: 28rpx; color: rgba(255,255,255,.16); font-family: Georgia, serif; font-size: 150rpx; }
+.section-card { margin-top: 24rpx; padding: 34rpx 30rpx; border: 1rpx solid #e0d5c7; border-radius: 30rpx; background: #fffdf9; }
+.section-kicker { display: block; color: #9a6d2f; font-size: 18rpx; font-weight: 800; letter-spacing: 4rpx; }
+.section-title { display: block; margin: 10rpx 0 24rpx; font-family: Georgia, "Songti SC", serif; font-size: 33rpx; font-weight: 600; }
+.section-copy { display: block; margin: -8rpx 0 24rpx; color: #756d66; font-size: 23rpx; line-height: 1.7; }
+.action-button { margin-top: 20rpx; }
+.code-row { display: flex; gap: 14rpx; margin-top: 18rpx; }
+.code-field { min-width: 0; flex: 1; }
+.code-button { width: 210rpx; min-height: 88rpx; font-size: 24rpx; line-height: 88rpx; }
+.feedback-types { display: flex; margin-bottom: 22rpx; flex-wrap: wrap; gap: 16rpx 24rpx; color: #5c5550; font-size: 23rpx; }
+.feedback-types label { display: flex; align-items: center; }
+.feedback-types radio { transform: scale(.78); }
+.feedback-box { box-sizing: border-box; width: 100%; min-height: 210rpx; margin-bottom: 18rpx; padding: 24rpx; border: 1rpx solid #dfd5c7; border-radius: 24rpx; background: #fffdf9; font-size: 25rpx; line-height: 1.65; }
+.data-card { padding-top: 30rpx; padding-bottom: 12rpx; }
+.setting-row { display: flex; width: 100%; min-height: 88rpx; padding: 0; align-items: center; justify-content: space-between; border-top: 1rpx solid #eee6dc; border-radius: 0; background: transparent; color: #49423e; font-size: 25rpx; line-height: 88rpx; text-align: left; }
+.setting-row:first-of-type { margin-top: 20rpx; }
+.delete-button { margin-top: 28rpx; }
+.version { display: block; margin: 24rpx 0 10rpx; color: #9b9189; font-size: 19rpx; line-height: 1.6; text-align: center; }

@@ -1,0 +1,63 @@
+<view class="page-shell launch-page">
+  <view class="safe-top"></view>
+  <view class="constellation constellation-one">✦</view>
+  <view class="constellation constellation-two">· · ✧</view>
+
+  <view wx:if="{{mode === 'loading'}}" class="launch-center">
+    <hina-mark mood="thinking"></hina-mark>
+    <view class="eyebrow loading-label">Hina is opening the door</view>
+    <view class="loading-dots"><text></text><text></text><text></text></view>
+  </view>
+
+  <view wx:elif="{{mode === 'error'}}" class="launch-center error-state">
+    <hina-mark mood="sleepy"></hina-mark>
+    <text class="display-title">差一点就见面了。</text>
+    <text class="error-copy">{{error}}</text>
+    <button class="primary-button retry-button" loading="{{busy}}" bindtap="loginWithWeChat">重新连接</button>
+    <text class="support-copy">仍然无法进入？请联系 hina-cn@foxmail.com</text>
+  </view>
+
+  <view wx:else class="onboarding">
+    <view class="onboarding-hero">
+      <hina-mark></hina-mark>
+      <view class="hero-copy">
+        <text class="eyebrow">A tiny New York hello</text>
+        <text class="display-title">嗨，我是 Hina。</text>
+        <text class="intro">陪你把英语说得更自然，也把那些值得记住的小瞬间收进口袋里。</text>
+      </view>
+    </view>
+
+    <view class="card consent-card">
+      <text class="card-number">01</text>
+      <text class="section-title">确认你的年龄</text>
+      <text class="section-copy">当前版本只面向年满 18 周岁的用户。生日仅用于年龄确认，不会展示给其他用户。</text>
+      <text class="field-label">出生日期</text>
+      <picker mode="date" value="{{birthDate}}" end="{{maxBirthDate}}" bindchange="onBirthDate">
+        <view class="field date-field {{birthDate ? '' : 'placeholder'}}">{{birthDate || '选择日期'}}</view>
+      </picker>
+    </view>
+
+    <view class="card consent-card second-card">
+      <text class="card-number rose">02</text>
+      <text class="section-title">把边界说清楚</text>
+      <text class="section-copy">对话会由 AI 生成，并通过火山引擎与微信内容安全服务处理。Hina 不是医疗、心理或紧急救助服务。</text>
+      <checkbox-group bindchange="onConsentChange" class="consent-list">
+        <label class="consent-row">
+          <checkbox value="adult" color="#37443d"></checkbox>
+          <text>我确认已年满 18 周岁</text>
+        </label>
+        <label class="consent-row">
+          <checkbox value="privacy" color="#37443d"></checkbox>
+          <text>我已阅读并同意</text>
+          <text class="inline-link" catchtap="openPrivacy">隐私保护指引</text>
+          <text>和</text>
+          <text class="inline-link" catchtap="openTerms">使用条款</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <text wx:if="{{error}}" class="form-error">{{error}}</text>
+    <button class="primary-button enter-button" disabled="{{!birthDate || !adultConfirmed || !privacyAccepted || busy}}" loading="{{busy}}" bindtap="finishOnboarding">开始和 Hina 聊天</button>
+    <view class="bottom-safe-space"></view>
+  </view>
+</view>

@@ -1,0 +1,69 @@
+<view class="page-shell profile-page">
+  <view class="safe-top"></view>
+  <view class="profile-hero">
+    <hina-mark></hina-mark>
+    <view class="hero-text">
+      <text class="eyebrow">Your Hina pocket</text>
+      <text class="display-title">我的</text>
+      <text class="hero-subtitle">把账号、边界和数据控制权放在你手里。</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading">正在整理你的设置…</view>
+  <block wx:else>
+    <view class="card plan-card">
+      <view>
+        <text class="plan-label">{{billing && billing.isPro ? 'HINA PRO' : 'FREE PLAN'}}</text>
+        <text class="plan-title">{{billing && billing.remainingToday === null ? '今天尽管聊' : '今天还可以聊 ' + (billing ? billing.remainingToday : '—') + ' 次'}}</text>
+      </view>
+      <text class="plan-orbit">◌</text>
+    </view>
+
+    <view class="section-card">
+      <text class="section-kicker">PROFILE</text>
+      <text class="section-title">怎么称呼你</text>
+      <input class="field" value="{{displayName}}" maxlength="50" data-field="displayName" bindinput="onField" placeholder="你的名字" />
+      <button class="secondary-button action-button" loading="{{busy === 'name'}}" bindtap="saveName">保存名字</button>
+    </view>
+
+    <view class="section-card">
+      <text class="section-kicker">ONE ACCOUNT</text>
+      <text class="section-title">连接已有网页版账号</text>
+      <text class="section-copy">如果你已经用邮箱注册过 Hina，可以把小程序里的数据合并回原账号。</text>
+      <input class="field" type="text" value="{{email}}" data-field="email" bindinput="onField" placeholder="网页版账号邮箱" />
+      <button wx:if="{{!linkCodeSent}}" class="secondary-button action-button" loading="{{busy === 'email'}}" bindtap="sendLinkCode">发送验证码</button>
+      <view wx:else class="code-row">
+        <input class="field code-field" type="number" value="{{code}}" maxlength="6" data-field="code" bindinput="onField" placeholder="6 位验证码" />
+        <button class="primary-button code-button" loading="{{busy === 'email'}}" bindtap="confirmLink">确认合并</button>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <text class="section-kicker">TELL US</text>
+      <text class="section-title">反馈与安全报告</text>
+      <radio-group class="feedback-types" bindchange="changeFeedbackCategory">
+        <label><radio value="bug" checked color="#526357"></radio>问题</label>
+        <label><radio value="safety" color="#526357"></radio>安全</label>
+        <label><radio value="privacy" color="#526357"></radio>隐私</label>
+        <label><radio value="other" color="#526357"></radio>其他</label>
+      </radio-group>
+      <textarea class="feedback-box" value="{{feedbackMessage}}" maxlength="2000" data-field="feedbackMessage" bindinput="onField" placeholder="发生了什么？我们会认真阅读。"></textarea>
+      <input class="field" value="{{feedbackContact}}" maxlength="200" data-field="feedbackContact" bindinput="onField" placeholder="联系方式（选填）" />
+      <button class="secondary-button action-button" loading="{{busy === 'feedback'}}" bindtap="sendFeedback">提交反馈</button>
+    </view>
+
+    <view class="section-card data-card">
+      <text class="section-kicker">YOUR DATA</text>
+      <button class="setting-row" loading="{{busy === 'export'}}" bindtap="exportData"><text>导出我的数据</text><text>↗</text></button>
+      <button class="setting-row" bindtap="openPrivacy"><text>隐私保护指引</text><text>›</text></button>
+      <button class="setting-row" bindtap="openTerms"><text>使用条款</text><text>›</text></button>
+      <button class="setting-row" bindtap="logout"><text>退出登录</text><text>›</text></button>
+    </view>
+
+    <button class="danger-button delete-button" bindtap="deleteAccount">永久注销账号</button>
+    <text class="version">Hina CN · 小程序 {{appVersion}} · {{contactEmail}}</text>
+  </block>
+
+  <view class="bottom-safe-space"></view>
+  <bottom-nav current="profile"></bottom-nav>
+</view>

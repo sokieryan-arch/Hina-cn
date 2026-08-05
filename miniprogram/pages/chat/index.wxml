@@ -1,0 +1,62 @@
+<view class="page-shell chat-page">
+  <view class="safe-top"></view>
+  <view class="chat-header">
+    <view class="identity">
+      <hina-mark small></hina-mark>
+      <view>
+        <view class="name-row"><text class="name">Hina</text><text class="status-dot"></text></view>
+        <text class="presence">{{presence}}</text>
+      </view>
+    </view>
+    <view wx:if="{{billing}}" class="quota">
+      <text class="quota-number">{{billing.remainingToday === null ? '∞' : billing.remainingToday}}</text>
+      <text class="quota-label">今日余量</text>
+    </view>
+  </view>
+
+  <scroll-view class="conversation" scroll-y scroll-with-animation scroll-into-view="{{scrollToView}}">
+    <view wx:if="{{loading}}" class="loading-conversation">
+      <hina-mark mood="thinking"></hina-mark>
+      <text>正在翻开我们的聊天页…</text>
+    </view>
+
+    <view wx:elif="{{messages.length === 0}}" class="empty-conversation">
+      <text class="eyebrow">New York, now</text>
+      <text class="display-title">What’s your tiny story today?</text>
+      <text class="empty-copy">不用准备一段完美英语。丢给我一个念头、一个槽点，或者今天最小的一件事。</text>
+      <view class="starter-list">
+        <button wx:for="{{starters}}" wx:key="*this" class="starter" data-text="{{item}}" bindtap="useStarter">{{item}} <text>↗</text></button>
+      </view>
+    </view>
+
+    <view wx:else class="message-list">
+      <view wx:for="{{messages}}" wx:key="anchor" id="{{item.anchor}}" class="message-row {{item.isModel ? 'model-row' : 'user-row'}} {{item.isTip ? 'tip-row' : ''}}">
+        <hina-mark wx:if="{{item.isModel && !item.isTip}}" small></hina-mark>
+        <view class="message-card {{item.isModel ? 'model-card' : 'user-card'}} {{item.isTip ? 'tip-card' : ''}}">
+          <view wx:if="{{item.isTip}}" class="tip-label">{{item.tipKind === 'correction' ? 'TINY POLISH' : 'STEAL THIS PHRASE'}}</view>
+          <text class="message-text" selectable>{{item.text}}</text>
+          <button wx:if="{{item.canSpeak}}" class="voice-button {{speakingId === item.id ? 'playing' : ''}}" data-id="{{item.id}}" data-text="{{item.text}}" bindtap="playVoice">
+            <text>{{speakingId === item.id ? '◼' : '▶'}}</text>
+            <text>{{speakingId === item.id ? '正在播放' : '听 Hina 说'}}</text>
+          </button>
+        </view>
+      </view>
+
+      <view wx:if="{{sending}}" class="message-row model-row typing-row">
+        <hina-mark small mood="thinking"></hina-mark>
+        <view class="typing-card"><text></text><text></text><text></text></view>
+      </view>
+    </view>
+    <view class="conversation-end"></view>
+  </scroll-view>
+
+  <view class="composer-shell">
+    <view class="composer-card">
+      <textarea class="composer" value="{{composer}}" maxlength="1200" auto-height fixed="true" cursor-spacing="24" placeholder="Tell Hina what’s on your mind…" placeholder-class="composer-placeholder" bindinput="onComposer" bindconfirm="sendMessage" confirm-type="send"></textarea>
+      <button class="send-button" disabled="{{!composer || sending}}" bindtap="sendMessage">↑</button>
+    </view>
+    <text class="ai-note">AI 生成内容可能出错，请自行判断重要信息</text>
+  </view>
+
+  <bottom-nav current="chat"></bottom-nav>
+</view>

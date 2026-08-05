@@ -1,0 +1,46 @@
+.nav-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  padding: 18rpx 34rpx calc(18rpx + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.nav-pill {
+  display: flex;
+  max-width: 620rpx;
+  margin: 0 auto;
+  padding: 10rpx;
+  border: 1rpx solid rgba(92, 78, 63, 0.18);
+  border-radius: 42rpx;
+  background: rgba(255, 253, 249, 0.96);
+  box-shadow: 0 18rpx 45rpx rgba(55, 43, 30, 0.16);
+  pointer-events: auto;
+}
+
+.nav-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  min-height: 72rpx;
+  padding: 0;
+  border-radius: 32rpx;
+  background: transparent;
+  color: #8d847d;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 72rpx;
+}
+
+.nav-item.active {
+  background: #37443d;
+  color: #fffdf8;
+}
+
+.nav-glyph {
+  font-size: 28rpx;
+}

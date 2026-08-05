@@ -1,0 +1,7 @@
+.document-page { min-height: 100vh; padding: 54rpx 34rpx 90rpx; box-sizing: border-box; background: #f8f3ea; color: #3f3935; }
+.eyebrow { display: block; color: #9a6d2f; font-size: 19rpx; font-weight: 800; letter-spacing: 4rpx; }
+.document-title { display: block; margin-top: 16rpx; font-family: Georgia, "Songti SC", serif; font-size: 50rpx; font-weight: 600; }
+.document-meta { display: block; margin-top: 18rpx; color: #8c827a; font-size: 22rpx; }
+.summary-card { margin: 36rpx 0; padding: 30rpx; border: 1rpx solid #d9cdbf; border-radius: 28rpx; background: #fffdf9; color: #526357; font-size: 26rpx; font-weight: 600; line-height: 1.8; }
+.section { display: flex; margin-top: 34rpx; flex-direction: column; gap: 12rpx; color: #625a54; font-size: 25rpx; line-height: 1.82; }
+.heading { color: #332e2b; font-family: Georgia, "Songti SC", serif; font-size: 31rpx; font-weight: 600; }

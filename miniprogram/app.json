@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/launch/index",
+    "pages/chat/index",
+    "pages/notes/index",
+    "pages/profile/index",
+    "pages/privacy/index",
+    "pages/terms/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#F8F3EA",
+    "backgroundTextStyle": "light"
+  },
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}
