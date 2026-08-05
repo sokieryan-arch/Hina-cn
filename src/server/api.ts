@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { normalizeLanguageTips } from "../shared/languageTips.js";
@@ -11,18 +12,26 @@ import { buildProactivePrompt, normalizeProactiveSettings, shouldCreateProactive
 import { sanitizeChatMessages } from "./requestGuards.js";
 import type { AuthService } from "./auth/authService.js";
 import type { createWeChatOAuth } from "./auth/wechat.js";
+import type { WeChatMiniAuth } from "./auth/wechatMini.js";
 import type { LanguagePartnerProvider, SpeechProvider } from "./providers/types.js";
 import type { AppStore, MessageRecord } from "./store/types.js";
 import type { createRateLimiter } from "./rateLimit.js";
 import type { MomentService } from "./moments.js";
 import type { StudyCategory } from "../shared/languageTips.js";
 import type { WishlistKind } from "../shared/types.js";
+import { parseIdentifier } from "./auth/identifiers.js";
+import { hasImmediateSafetyRisk, SAFETY_SUPPORT_MESSAGE } from "./safety.js";
+import type { WeChatContentSafety } from "./wechatContentSafety.js";
+
+const PRIVACY_VERSION = "2026-07-24";
 
 interface ApiDependencies {
   app: Express;
   store: AppStore;
   auth: AuthService;
   wechat: ReturnType<typeof createWeChatOAuth>;
+  wechatMini?: WeChatMiniAuth;
+  wechatContentSafety?: WeChatContentSafety;
   provider: LanguagePartnerProvider;
   speech: SpeechProvider;
   moments?: MomentService;
@@ -60,6 +69,28 @@ function toClientMessage(message: MessageRecord) {
     tipKind: message.tipKind,
     timestamp: message.createdAt.getTime(),
   };
+}
+
+function isAdultBirthDate(value: string, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const birthDate = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(birthDate.getTime()) || birthDate > now) return false;
+  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+  const birthdayPassed = now.getUTCMonth() > birthDate.getUTCMonth()
+    || now.getUTCMonth() === birthDate.getUTCMonth() && now.getUTCDate() >= birthDate.getUTCDate();
+  if (!birthdayPassed) age -= 1;
+  return age >= 18;
+}
+
+function toClientSafetyProfile(profile: Awaited<ReturnType<AppStore["account"]["getSafetyProfile"]>>) {
+  return profile
+    ? {
+      birthDate: profile.birthDate,
+      adultConfirmed: profile.adultConfirmed,
+      privacyVersion: profile.privacyVersion,
+      consentedAt: profile.consentedAt.toISOString(),
+    }
+    : null;
 }
 
 async function currentUser(req: Request, deps: ApiDependencies) {
@@ -166,6 +197,89 @@ export function registerApiRoutes(deps: ApiDependencies) {
     try {
       const user = await requireUser(req, deps);
       res.json({ billing: await store.billing.getBillingSummary(user.id) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/account/safety-profile", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const profile = await store.account.getSafetyProfile(user.id);
+      res.json({
+        profile: toClientSafetyProfile(profile),
+        privacyVersion: PRIVACY_VERSION,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.put("/api/account/safety-profile", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const birthDate = String(req.body?.birthDate ?? "");
+      if (req.body?.adultConfirmed !== true || !isAdultBirthDate(birthDate)) {
+        return res.status(403).json({ error: "adult_access_required" });
+      }
+      if (req.body?.privacyAccepted !== true) {
+        return res.status(400).json({ error: "privacy_consent_required" });
+      }
+      const profile = await store.account.saveSafetyProfile({
+        userId: user.id,
+        birthDate,
+        adultConfirmed: true,
+        privacyVersion: PRIVACY_VERSION,
+      });
+      res.json({ profile: toClientSafetyProfile(profile) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/account/export", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      res.setHeader("Content-Disposition", `attachment; filename="hina-data-${user.id}.json"`);
+      res.json(await store.account.exportUserData(user.id));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.delete("/api/account", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      if (req.body?.confirmation !== "DELETE") {
+        return res.status(400).json({ error: "account_deletion_confirmation_required" });
+      }
+      await store.account.deleteUser(user.id);
+      const uploadsRoot = path.resolve(deps.uploadsRoot ?? path.join(process.cwd(), "uploads"));
+      const userUploads = path.resolve(uploadsRoot, user.id);
+      if (userUploads.startsWith(`${uploadsRoot}${path.sep}`)) {
+        await fs.rm(userUploads, { recursive: true, force: true }).catch(() => undefined);
+      }
+      clearSessionCookie(res);
+      res.json({ ok: true });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const requestedCategory = String(req.body?.category ?? "other");
+      const category = ["bug", "safety", "privacy", "other"].includes(requestedCategory)
+        ? requestedCategory as "bug" | "safety" | "privacy" | "other"
+        : "other";
+      const report = await store.account.createFeedback({
+        userId: user.id,
+        category,
+        message: requiredText(req.body?.message, "feedback", 2000),
+        contact: optionalText(req.body?.contact, 200),
+      });
+      res.status(201).json({ id: report.id, createdAt: report.createdAt.toISOString() });
     } catch (error) {
       sendError(res, error);
     }
@@ -293,6 +407,95 @@ export function registerApiRoutes(deps: ApiDependencies) {
     }
   });
 
+  app.post("/api/auth/wechat-mini/login", async (req, res) => {
+    try {
+      if (!deps.wechatMini) throw new Error("wechat_mini_not_available");
+      const identity = await deps.wechatMini.exchangeCode(String(req.body?.code ?? ""));
+      let user = await store.auth.users.findByExternalIdentity("wechat_mini", identity.openid);
+      if (!user) {
+        user = await store.auth.users.create({
+          displayName: "WeChat Friend",
+          passwordHash: null,
+        });
+        await store.auth.users.linkExternalIdentity({
+          userId: user.id,
+          provider: "wechat_mini",
+          providerUserId: identity.openid,
+          unionId: identity.unionid,
+          rawProfile: {
+            openid: identity.openid,
+            unionid: identity.unionid ?? null,
+          },
+        });
+        user = await store.auth.users.findById(user.id) ?? user;
+      }
+
+      const result = await auth.createSessionForUser(user);
+      const safetyProfile = await store.account.getSafetyProfile(user.id);
+      setSessionCookie(res, result.session.token, result.session.expiresAt);
+      res.json({
+        user: result.user,
+        session: result.session,
+        needsOnboarding: !safetyProfile?.adultConfirmed
+          || safetyProfile.privacyVersion !== PRIVACY_VERSION,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/link/email/send-code", async (req, res) => {
+    try {
+      const sourceUser = await requireUser(req, deps);
+      const sourceIdentity = await store.auth.users.findExternalIdentityByUser(sourceUser.id, "wechat_mini");
+      if (!sourceIdentity) return res.status(403).json({ error: "wechat_mini_login_required" });
+      const identifier = parseIdentifier(String(req.body?.email ?? ""));
+      if (identifier.kind !== "email") return res.status(400).json({ error: "email_required" });
+      const targetUser = await store.auth.users.findByIdentifier(identifier);
+      if (!targetUser) return res.status(404).json({ error: "account_not_found" });
+      if (targetUser.id === sourceUser.id) return res.status(409).json({ error: "account_already_linked" });
+      res.json(await auth.sendCode({ target: identifier.value, purpose: "link_email" }));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/auth/link/email/confirm", async (req, res) => {
+    try {
+      const sourceUser = await requireUser(req, deps);
+      const sourceIdentity = await store.auth.users.findExternalIdentityByUser(sourceUser.id, "wechat_mini");
+      if (!sourceIdentity) return res.status(403).json({ error: "wechat_mini_login_required" });
+
+      const identifier = await auth.verifyIdentifierCode({
+        identifier: String(req.body?.email ?? ""),
+        code: String(req.body?.code ?? ""),
+        purpose: "link_email",
+      });
+      if (identifier.kind !== "email") return res.status(400).json({ error: "email_required" });
+      const targetUser = await store.auth.users.findByIdentifier(identifier);
+      if (!targetUser) return res.status(404).json({ error: "account_not_found" });
+      if (targetUser.id === sourceUser.id) return res.status(409).json({ error: "account_already_linked" });
+
+      const targetIdentity = await store.auth.users.findExternalIdentityByUser(targetUser.id, "wechat_mini");
+      if (targetIdentity && targetIdentity.providerUserId !== sourceIdentity.providerUserId) {
+        return res.status(409).json({ error: "wechat_already_linked" });
+      }
+
+      await store.account.mergeUsers(sourceUser.id, targetUser.id);
+      const mergedUser = await store.auth.users.findById(targetUser.id);
+      if (!mergedUser) throw new Error("account_merge_failed");
+      const result = await auth.createSessionForUser(mergedUser);
+      setSessionCookie(res, result.session.token, result.session.expiresAt);
+      res.json({
+        user: result.user,
+        session: result.session,
+        needsOnboarding: !(await store.account.getSafetyProfile(mergedUser.id))?.adultConfirmed,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
   app.get("/api/space/notes", async (req, res) => {
     try {
       const user = await requireUser(req, deps);
@@ -357,7 +560,7 @@ export function registerApiRoutes(deps: ApiDependencies) {
     }
   });
 
-  app.patch("/api/space/wishlist/:id", async (req, res) => {
+  const updateWishlist = async (req: Request, res: Response) => {
     try {
       const user = await requireUser(req, deps);
       const patch: Record<string, unknown> = {};
@@ -380,7 +583,9 @@ export function registerApiRoutes(deps: ApiDependencies) {
     } catch (error) {
       sendError(res, error);
     }
-  });
+  };
+  app.patch("/api/space/wishlist/:id", updateWishlist);
+  app.put("/api/space/wishlist/:id", updateWishlist);
 
   app.delete("/api/space/wishlist/:id", async (req, res) => {
     try {
@@ -459,11 +664,42 @@ export function registerApiRoutes(deps: ApiDependencies) {
 
       const messages = sanitizeChatMessages(req.body?.messages);
       const lastUser = [...messages].reverse().find((message) => message.role === "user");
+      if (lastUser && hasImmediateSafetyRisk(lastUser.text)) {
+        return res.status(409).json({
+          error: "safety_support_needed",
+          message: SAFETY_SUPPORT_MESSAGE,
+        });
+      }
+
+      const miniIdentity = deps.wechatContentSafety?.isEnabled()
+        ? await store.auth.users.findExternalIdentityByUser(user.id, "wechat_mini")
+        : null;
+      if (lastUser && miniIdentity && deps.wechatContentSafety) {
+        const check = await deps.wechatContentSafety.checkText({
+          openid: miniIdentity.providerUserId,
+          content: lastUser.text,
+        });
+        if (!check.allowed) {
+          return res.status(422).json({ error: "content_not_allowed" });
+        }
+      }
+
       if (lastUser) {
         await store.messages.addMessage({ userId: user.id, role: "user", text: lastUser.text, type: "response" });
       }
 
       const data = await deps.provider.chat(messages);
+      const tips = normalizeLanguageTips(data.tips);
+      if (miniIdentity && deps.wechatContentSafety) {
+        const check = await deps.wechatContentSafety.checkText({
+          openid: miniIdentity.providerUserId,
+          content: [data.response, ...tips.map((tip) => `${tip.title} ${tip.body}`)].join("\n"),
+        });
+        if (!check.allowed) {
+          return res.status(502).json({ error: "generated_content_not_allowed" });
+        }
+      }
+
       const responseMessage = await store.messages.addMessage({
         userId: user.id,
         role: "model",
@@ -471,7 +707,6 @@ export function registerApiRoutes(deps: ApiDependencies) {
         type: "response",
       });
 
-      const tips = normalizeLanguageTips(data.tips);
       const tipMessages = [];
       for (const tip of tips) {
         const text = [

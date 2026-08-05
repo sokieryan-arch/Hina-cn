@@ -1,0 +1,35 @@
+<view class="document-page">
+  <text class="eyebrow">A FEW GROUND RULES</text>
+  <text class="document-title">Hina 使用条款</text>
+  <text class="document-meta">生效日期：2026 年 8 月 5 日</text>
+
+  <view class="section">
+    <text class="heading">1. 服务定位</text>
+    <text>Hina 是面向成年人的 AI 英语陪伴与学习工具。回复由人工智能生成，可能存在事实、翻译或表达错误，请对重要信息进行独立核实。</text>
+  </view>
+
+  <view class="section warning">
+    <text class="heading">2. 不是紧急或专业服务</text>
+    <text>Hina 不是医疗、心理咨询、法律、金融或紧急救助服务。如果你或他人正面临危险，请立即联系身边可信任的人和当地紧急救助机构。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">3. 使用要求</text>
+    <text>你需要年满 18 周岁，并对账号下的操作负责。请勿利用本服务发布违法、有害、欺诈、骚扰、侵犯他人权利或试图破坏服务安全的内容。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">4. 内容与数据</text>
+    <text>你保留自己输入内容的相关权利，并授权我们在提供 Hina 服务所必需的范围内处理这些内容。你可以导出数据或注销账号。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">5. 服务变化</text>
+    <text>我们可能为安全、合规或产品改进调整功能与使用额度。发生重要变化时，会通过小程序内说明或其他合理方式告知。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">6. 联系方式</text>
+    <text>问题或申诉请通过“我的 → 反馈与安全报告”提交，或发送邮件至 {{contactEmail}}。</text>
+  </view>
+</view>

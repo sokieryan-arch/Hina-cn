@@ -1,4 +1,4 @@
-export type VerificationPurpose = "register" | "reset_password";
+export type VerificationPurpose = "register" | "reset_password" | "link_email";
 export type IdentifierKind = "email" | "phone";
 
 export interface ParsedIdentifier {
@@ -60,9 +60,15 @@ export interface UserStore {
   findById(id: string): Promise<UserRecord | null>;
   findByIdentifier(identifier: ParsedIdentifier): Promise<UserRecord | null>;
   create(input: CreateUserInput): Promise<UserRecord>;
+  delete(userId: string): Promise<void>;
   updatePassword(userId: string, passwordHash: string): Promise<void>;
   updateProfile(userId: string, patch: { displayName?: string; avatarUrl?: string | null }): Promise<UserRecord>;
   findByExternalIdentity(provider: string, providerUserId: string): Promise<UserRecord | null>;
+  findExternalIdentityByUser(userId: string, provider: string): Promise<{
+    providerUserId: string;
+    unionId?: string | null;
+  } | null>;
+  reassignExternalIdentities(sourceUserId: string, targetUserId: string): Promise<void>;
   linkExternalIdentity(input: {
     userId: string;
     provider: string;

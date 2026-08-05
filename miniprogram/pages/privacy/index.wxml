@@ -1,0 +1,41 @@
+<view class="document-page">
+  <text class="eyebrow">PRIVACY, IN PLAIN WORDS</text>
+  <text class="document-title">Hina 隐私保护指引</text>
+  <text class="document-meta">生效日期：{{effectiveDate}}</text>
+
+  <view class="summary-card">我们只收集让 Hina 能够登录、陪你对话、保存学习记录和保障内容安全所必需的信息。你可以随时导出或删除自己的数据。</view>
+
+  <view class="section">
+    <text class="heading">1. 我们处理哪些信息</text>
+    <text>• 微信登录标识：用于识别你的账号和保持登录状态。</text>
+    <text>• 出生日期：仅用于确认你是否年满 18 周岁。</text>
+    <text>• 对话与学习数据：包括你发送的文字、Hina 的回复、学习笔记、愿望清单和时间胶囊。</text>
+    <text>• 账号与反馈信息：你主动填写的昵称、邮箱、反馈内容和联系方式。</text>
+    <text>• 必要的服务日志：用于故障排查、安全防护和防止滥用。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">2. 信息如何使用</text>
+    <text>我们使用这些信息提供微信登录、AI 对话、语音播放、学习记录、账号合并、内容安全检查以及客户支持。不会出售你的个人信息，也不会用于与 Hina 无关的广告画像。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">3. 第三方服务</text>
+    <text>为了生成回复和语音，必要的对话文本会发送至火山引擎 Ark 与豆包语音服务处理。为遵守小程序内容安全要求，相关文本可能发送至微信内容安全接口。第三方仅在提供相应服务所需范围内处理数据。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">4. 存储、导出与删除</text>
+    <text>数据存储在中国大陆境内的服务器。你可以在“我的 → 导出我的数据”取得副本，也可以通过“永久注销账号”删除账号及关联数据。因安全审计或法律义务必须保留的最少记录，会在法定期限届满后删除。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">5. 未成年人</text>
+    <text>当前 Hina 小程序仅向年满 18 周岁的用户开放。我们不会主动向未成年人提供本服务。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">6. 联系我们</text>
+    <text>如需访问、更正、导出或删除个人信息，或对隐私处理有疑问，请在小程序“我的”页面提交隐私反馈，或联系 {{contactEmail}}。</text>
+  </view>
+</view>

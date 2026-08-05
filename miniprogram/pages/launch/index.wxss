@@ -1,0 +1,194 @@
+.launch-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.constellation {
+  position: absolute;
+  color: rgba(82, 99, 87, 0.26);
+  font-family: Georgia, serif;
+  pointer-events: none;
+}
+
+.constellation-one {
+  right: 48rpx;
+  top: 120rpx;
+  font-size: 74rpx;
+  transform: rotate(12deg);
+}
+
+.constellation-two {
+  left: 36rpx;
+  top: 46%;
+  font-size: 34rpx;
+  letter-spacing: 12rpx;
+  transform: rotate(-18deg);
+}
+
+.launch-center {
+  display: flex;
+  min-height: calc(100vh - env(safe-area-inset-top));
+  padding: 48rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-label {
+  margin-top: 42rpx;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.loading-dots text {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: #526357;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.loading-dots text:nth-child(2) { animation-delay: 0.16s; }
+.loading-dots text:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-8rpx); }
+}
+
+.error-state .display-title {
+  margin-top: 42rpx;
+}
+
+.error-copy {
+  max-width: 560rpx;
+  margin-top: 28rpx;
+  color: #786e67;
+  line-height: 1.8;
+}
+
+.retry-button {
+  width: 420rpx;
+  margin-top: 44rpx;
+}
+
+.support-copy {
+  margin-top: 24rpx;
+  color: #9a918a;
+  font-size: 22rpx;
+}
+
+.onboarding {
+  position: relative;
+  z-index: 1;
+  padding: 70rpx 34rpx 0;
+}
+
+.onboarding-hero {
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+  padding: 20rpx 18rpx 48rpx;
+}
+
+.hero-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.hero-copy .display-title {
+  margin-top: 14rpx;
+}
+
+.intro {
+  margin-top: 18rpx;
+  color: #6d655e;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.consent-card {
+  position: relative;
+  margin-bottom: 24rpx;
+  padding: 38rpx 32rpx 34rpx;
+}
+
+.card-number {
+  position: absolute;
+  right: 26rpx;
+  top: 20rpx;
+  color: rgba(82, 99, 87, 0.18);
+  font-family: Georgia, serif;
+  font-size: 64rpx;
+  font-style: italic;
+}
+
+.card-number.rose { color: rgba(185, 104, 111, 0.18); }
+
+.section-title {
+  display: block;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.section-copy {
+  display: block;
+  margin: 18rpx 0 30rpx;
+  padding-right: 38rpx;
+  color: #756d66;
+  font-size: 24rpx;
+  line-height: 1.75;
+}
+
+.date-field {
+  line-height: 88rpx;
+}
+
+.date-field.placeholder { color: #aaa199; }
+
+.consent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6rpx;
+  color: #514b47;
+  font-size: 24rpx;
+  line-height: 42rpx;
+}
+
+.consent-row checkbox {
+  transform: scale(0.82);
+}
+
+.inline-link {
+  color: #8b5b2b;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.form-error {
+  display: block;
+  margin: 20rpx 12rpx;
+  color: #a64f55;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.enter-button {
+  margin-top: 30rpx;
+}

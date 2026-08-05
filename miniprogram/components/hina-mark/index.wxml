@@ -1,0 +1,10 @@
+<view class="hina-mark {{mood}} {{small ? 'small' : ''}}" aria-label="Hina">
+  <view class="orbit orbit-one"></view>
+  <view class="orbit orbit-two"></view>
+  <view class="face">
+    <view class="eye eye-left"></view>
+    <view class="eye eye-right"></view>
+    <view class="smile"></view>
+  </view>
+  <view class="spark">✦</view>
+</view>

@@ -11,6 +11,7 @@ import type {
   ProactiveSettingsRecord,
   StudyNoteRecord,
   TimeCapsuleRecord,
+  UserSafetyProfileRecord,
   WishlistItemRecord,
 } from "./types.js";
 
@@ -24,6 +25,15 @@ export function createMemoryAppStore(): AppStore {
   const notes = new Map<string, StudyNoteRecord[]>();
   const wishlist = new Map<string, WishlistItemRecord[]>();
   const capsules = new Map<string, TimeCapsuleRecord[]>();
+  const safetyProfiles = new Map<string, UserSafetyProfileRecord>();
+  const feedback = new Map<string, Array<{
+    id: string;
+    userId: string;
+    category: "bug" | "safety" | "privacy" | "other";
+    message: string;
+    contact?: string | null;
+    createdAt: Date;
+  }>>();
 
   async function getProactiveSettings(userId: string) {
     const existing = proactive.get(userId);
@@ -197,6 +207,142 @@ export function createMemoryAppStore(): AppStore {
           notesCount: (notes.get(userId) ?? []).length,
           completedGoals: (wishlist.get(userId) ?? []).filter((item) => item.completed).length,
         };
+      },
+    },
+    account: {
+      async getSafetyProfile(userId) {
+        return safetyProfiles.get(userId) ?? null;
+      },
+      async saveSafetyProfile(input) {
+        const now = new Date();
+        const record: UserSafetyProfileRecord = {
+          ...input,
+          consentedAt: now,
+          updatedAt: now,
+        };
+        safetyProfiles.set(input.userId, record);
+        return record;
+      },
+      async createFeedback(input) {
+        const record = { ...input, id: nanoid(), createdAt: new Date() };
+        feedback.set(input.userId, [...(feedback.get(input.userId) ?? []), record]);
+        return record;
+      },
+      async exportUserData(userId) {
+        const user = await auth.users.findById(userId);
+        if (!user) throw new Error("user_not_found");
+        const { passwordHash: _passwordHash, ...safeUser } = user;
+        return {
+          exportedAt: new Date().toISOString(),
+          user: safeUser,
+          messages: messages.get(userId) ?? [],
+          proactiveSettings: proactive.get(userId) ?? null,
+          billing: await billing.getBillingSummary(userId),
+          studyNotes: notes.get(userId) ?? [],
+          wishlist: wishlist.get(userId) ?? [],
+          capsules: capsules.get(userId) ?? [],
+          safetyProfile: safetyProfiles.get(userId) ?? null,
+          feedback: feedback.get(userId) ?? [],
+        };
+      },
+      async mergeUsers(sourceUserId, targetUserId) {
+        if (sourceUserId === targetUserId) return;
+        const [source, target] = await Promise.all([
+          auth.users.findById(sourceUserId),
+          auth.users.findById(targetUserId),
+        ]);
+        if (!source || !target) throw new Error("user_not_found");
+
+        messages.set(targetUserId, [
+          ...(messages.get(targetUserId) ?? []),
+          ...(messages.get(sourceUserId) ?? []).map((message) => ({ ...message, userId: targetUserId })),
+        ]);
+        messages.delete(sourceUserId);
+
+        const targetNotes = notes.get(targetUserId) ?? [];
+        const dedupeKeys = new Set(targetNotes.map((note) => note.dedupeKey));
+        notes.set(targetUserId, [
+          ...targetNotes,
+          ...(notes.get(sourceUserId) ?? [])
+            .filter((note) => !dedupeKeys.has(note.dedupeKey))
+            .map((note) => ({ ...note, userId: targetUserId })),
+        ]);
+        notes.delete(sourceUserId);
+
+        wishlist.set(targetUserId, [
+          ...(wishlist.get(targetUserId) ?? []),
+          ...(wishlist.get(sourceUserId) ?? []).map((item) => ({ ...item, userId: targetUserId })),
+        ]);
+        wishlist.delete(sourceUserId);
+        capsules.set(targetUserId, [
+          ...(capsules.get(targetUserId) ?? []),
+          ...(capsules.get(sourceUserId) ?? []).map((item) => ({ ...item, userId: targetUserId })),
+        ]);
+        capsules.delete(sourceUserId);
+
+        const sourceProactive = proactive.get(sourceUserId);
+        const targetProactive = proactive.get(targetUserId);
+        if (sourceProactive) {
+          proactive.set(targetUserId, targetProactive
+            ? {
+              ...targetProactive,
+              enabled: targetProactive.enabled || sourceProactive.enabled,
+              favoriteTopics: Array.from(new Set([
+                ...targetProactive.favoriteTopics,
+                ...sourceProactive.favoriteTopics,
+              ])).slice(0, 5),
+              lastNudgeAt: !targetProactive.lastNudgeAt
+                || (sourceProactive.lastNudgeAt && sourceProactive.lastNudgeAt > targetProactive.lastNudgeAt)
+                ? sourceProactive.lastNudgeAt
+                : targetProactive.lastNudgeAt,
+            }
+            : { ...sourceProactive });
+          proactive.delete(sourceUserId);
+        }
+
+        for (const [key, value] of usageDaily.entries()) {
+          if (!key.startsWith(`${sourceUserId}:`)) continue;
+          const targetKey = `${targetUserId}:${key.slice(sourceUserId.length + 1)}`;
+          usageDaily.set(targetKey, (usageDaily.get(targetKey) ?? 0) + value);
+          usageDaily.delete(key);
+        }
+
+        const sourceEntitlement = entitlements.get(sourceUserId);
+        const targetEntitlement = entitlements.get(targetUserId);
+        if (sourceEntitlement && (!targetEntitlement || (sourceEntitlement.plan === "pro" && targetEntitlement.plan !== "pro"))) {
+          entitlements.set(targetUserId, sourceEntitlement);
+        }
+        entitlements.delete(sourceUserId);
+
+        if (!safetyProfiles.has(targetUserId) && safetyProfiles.has(sourceUserId)) {
+          safetyProfiles.set(targetUserId, {
+            ...safetyProfiles.get(sourceUserId)!,
+            userId: targetUserId,
+          });
+        }
+        safetyProfiles.delete(sourceUserId);
+        feedback.set(targetUserId, [
+          ...(feedback.get(targetUserId) ?? []),
+          ...(feedback.get(sourceUserId) ?? []).map((item) => ({ ...item, userId: targetUserId })),
+        ]);
+        feedback.delete(sourceUserId);
+
+        await auth.users.reassignExternalIdentities(sourceUserId, targetUserId);
+        await auth.users.delete(sourceUserId);
+      },
+      async deleteUser(userId) {
+        messages.delete(userId);
+        proactive.delete(userId);
+        entitlements.delete(userId);
+        notes.delete(userId);
+        wishlist.delete(userId);
+        capsules.delete(userId);
+        safetyProfiles.delete(userId);
+        feedback.delete(userId);
+        for (const key of usageDaily.keys()) {
+          if (key.startsWith(`${userId}:`)) usageDaily.delete(key);
+        }
+        await auth.users.delete(userId);
       },
     },
   };

@@ -1,0 +1,6 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "hina-mark": "/components/hina-mark/index"
+  }
+}

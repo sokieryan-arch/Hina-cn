@@ -1,0 +1,42 @@
+<view class="page-shell notes-page">
+  <view class="safe-top"></view>
+  <view class="page-header">
+    <view>
+      <text class="eyebrow">Hina’s margin notes</text>
+      <text class="display-title">学习口袋</text>
+      <text class="header-copy">聊天里值得留下的修正、表达和文化小知识，会自动出现在这里。</text>
+    </view>
+    <hina-mark small></hina-mark>
+  </view>
+
+  <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="false">
+    <view class="filter-row">
+      <button wx:for="{{filters}}" wx:key="key" class="filter {{active === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="changeFilter">{{item.label}}</button>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{loading}}" class="notes-state">正在整理页边的小字…</view>
+  <view wx:elif="{{notes.length === 0}}" class="card notes-state empty-state">
+    <text class="empty-symbol">⌁</text>
+    <text class="empty-title">这个口袋还是空的</text>
+    <text>和 Hina 聊几句，最有用的两条学习提示会自动收进来。</text>
+  </view>
+  <view wx:else class="note-grid">
+    <view wx:for="{{notes}}" wx:key="id" class="note-card category-{{item.category}}">
+      <view class="note-topline">
+        <text class="note-category">{{item.category}}</text>
+        <button class="delete-note" data-id="{{item.id}}" bindtap="deleteNote">×</button>
+      </view>
+      <text class="note-title">{{item.title}}</text>
+      <text class="note-body" selectable>{{item.body}}</text>
+      <view wx:if="{{item.original && item.suggestion}}" class="correction">
+        <text class="old">{{item.original}}</text>
+        <text class="arrow">→</text>
+        <text class="new">{{item.suggestion}}</text>
+      </view>
+      <text wx:if="{{item.example}}" class="example" selectable>“{{item.example}}”</text>
+    </view>
+  </view>
+  <view class="bottom-safe-space"></view>
+  <bottom-nav current="notes"></bottom-nav>
+</view>

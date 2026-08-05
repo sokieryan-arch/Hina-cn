@@ -1,0 +1,16 @@
+{
+  "description": "Hina CN 微信小程序",
+  "miniprogramRoot": "miniprogram/",
+  "compileType": "miniprogram",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": true,
+    "checkSiteMap": true,
+    "enhance": true
+  },
+  "appid": "wx13dfecb38a2fc260",
+  "projectname": "hina-cn-wechat",
+  "condition": {}
+}

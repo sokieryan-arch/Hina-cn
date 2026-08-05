@@ -16,6 +16,9 @@ interface HealthEnv {
   VOLCENGINE_TTS_ACCESS_TOKEN?: string;
   VOLCENGINE_TTS_RESOURCE_ID?: string;
   VOLCENGINE_TTS_VOICE_TYPE?: string;
+  WECHAT_MINI_APP_ID?: string;
+  WECHAT_MINI_APP_SECRET?: string;
+  WECHAT_CONTENT_SECURITY_ENABLED?: string;
 }
 
 interface CheckResult {
@@ -104,9 +107,15 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
     configured: hasCompleteSpeechConfig,
     ok: !hasAnySpeechConfig || hasCompleteSpeechConfig,
   };
+  const wechatMini = {
+    configured: Boolean(env.WECHAT_MINI_APP_ID && env.WECHAT_MINI_APP_SECRET),
+    contentSafetyEnabled: env.WECHAT_CONTENT_SECURITY_ENABLED === "true",
+    ok: env.WECHAT_CONTENT_SECURITY_ENABLED !== "true"
+      || Boolean(env.WECHAT_MINI_APP_ID && env.WECHAT_MINI_APP_SECRET),
+  };
 
   return {
-    ok: database.ok && redis.ok && model.ok && email.ok && speech.ok,
+    ok: database.ok && redis.ok && model.ok && email.ok && speech.ok && wechatMini.ok,
     env: runtimeEnv.appEnv,
     nodeEnv: runtimeEnv.nodeEnv,
     uptimeSeconds: Math.floor(options.uptimeSeconds?.() ?? process.uptime()),
@@ -115,5 +124,6 @@ export async function buildHealthStatus(options: HealthOptions = {}) {
     model,
     email,
     speech,
+    wechatMini,
   };
 }
