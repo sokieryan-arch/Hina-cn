@@ -5,6 +5,8 @@ interface SpeechQueueOptions<T> {
   isCancelled?: () => boolean;
 }
 
+type AudioElementLike = Pick<HTMLAudioElement, "src" | "onended" | "onerror" | "play" | "pause">;
+
 type SettledSpeech<T> =
   | { ok: true; speech: T }
   | { ok: false; error: unknown };
@@ -15,6 +17,36 @@ async function startSynthesis<T>(synthesize: (chunk: string) => Promise<T>, chun
   } catch (error) {
     return { ok: false, error };
   }
+}
+
+export function playAudioSource(audio: AudioElementLike, source: string, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+
+    let settled = false;
+    const finish = (error?: unknown, failed = false) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener("abort", onAbort);
+      audio.onended = null;
+      audio.onerror = null;
+      if (failed) reject(error);
+      else resolve();
+    };
+    const onAbort = () => {
+      audio.pause();
+      finish();
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    audio.onended = () => finish();
+    audio.onerror = () => finish(new Error("speech_playback_failed"), true);
+    audio.src = source;
+    audio.play().catch((error) => finish(error, true));
+  });
 }
 
 export async function playSpeechQueue<T>({
