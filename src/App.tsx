@@ -9,6 +9,8 @@ import { ChatMessage } from "./components/ChatMessage.js";
 import { SettingsModal } from "./components/SettingsModal.js";
 import { pickChatPlaceholder } from "./i18n/chatPlaceholder.js";
 import { ambientPresence, resolvePresence } from "./lib/presence.js";
+import { splitSpeechText } from "./lib/speechChunks.js";
+import { playSpeechQueue } from "./lib/speechPlayback.js";
 import type { BillingSummary, CurrentUser, Message, ProactiveSettings, WishlistSuggestion } from "./shared/types.js";
 
 const HinaSpace = lazy(() => import("./components/HinaSpace.js").then((module) => ({ default: module.HinaSpace })));
@@ -76,6 +78,7 @@ export default function App() {
   const [billing, setBilling] = useState<BillingSummary | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechAbortRef = useRef<AbortController | null>(null);
 
   const isGenerating = activity !== "ambient";
   const presence = resolvePresence({
@@ -101,6 +104,7 @@ export default function App() {
   }, []);
 
   useEffect(() => () => {
+    speechAbortRef.current?.abort();
     audioRef.current?.pause();
   }, []);
 
@@ -151,23 +155,63 @@ export default function App() {
   );
 
   const playAudio = useCallback(async (text: string, messageId: string) => {
+    speechAbortRef.current?.abort();
+    audioRef.current?.pause();
+    audioRef.current = null;
+
+    const chunks = splitSpeechText(text);
+    if (chunks.length === 0) return;
+
+    const controller = new AbortController();
+    speechAbortRef.current = controller;
+
     try {
-      audioRef.current?.pause();
-      audioRef.current = null;
       setSpeakingMessageId(messageId);
-      const data = await api.tts(text);
-      if (!data?.audio) {
-        setSpeakingMessageId(null);
-        return;
-      }
-      const audio = new Audio(`data:${data.mimeType};base64,${data.audio}`);
-      audioRef.current = audio;
-      audio.onended = () => setSpeakingMessageId(null);
-      audio.onerror = () => setSpeakingMessageId(null);
-      await audio.play();
+      await playSpeechQueue({
+        chunks,
+        isCancelled: () => controller.signal.aborted,
+        async synthesize(chunk) {
+          const data = await api.tts(chunk);
+          if (!data?.audio) throw new Error("speech_unavailable");
+          return data;
+        },
+        play: (data) => new Promise<void>((resolve, reject) => {
+          if (controller.signal.aborted) {
+            resolve();
+            return;
+          }
+
+          const audio = new Audio(`data:${data.mimeType};base64,${data.audio}`);
+          audioRef.current = audio;
+          let settled = false;
+
+          const finish = (error?: unknown) => {
+            if (settled) return;
+            settled = true;
+            controller.signal.removeEventListener("abort", onAbort);
+            if (audioRef.current === audio) audioRef.current = null;
+            if (error) reject(error);
+            else resolve();
+          };
+          const onAbort = () => {
+            audio.pause();
+            finish();
+          };
+
+          controller.signal.addEventListener("abort", onAbort, { once: true });
+          audio.onended = () => finish();
+          audio.onerror = () => finish(new Error("speech_playback_failed"));
+          audio.play().catch((error) => finish(error));
+        }),
+      });
     } catch (error) {
-      console.error(error);
-      setSpeakingMessageId(null);
+      if (!controller.signal.aborted) console.error(error);
+    } finally {
+      if (speechAbortRef.current === controller) {
+        speechAbortRef.current = null;
+        audioRef.current = null;
+        setSpeakingMessageId(null);
+      }
     }
   }, []);
 
