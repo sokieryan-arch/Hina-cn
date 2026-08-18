@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { playSpeechQueue } from "./speechPlayback.js";
+import { playAudioSource, playSpeechQueue } from "./speechPlayback.js";
 
 test("prefetches the next speech chunk before playing the current one", async () => {
   const events: string[] = [];
@@ -43,4 +43,32 @@ test("stops the speech queue cleanly after cancellation", async () => {
   });
 
   assert.deepEqual(played, ["one"]);
+});
+
+test("reuses one unlocked audio element for every speech chunk", async () => {
+  const playedSources: string[] = [];
+  const audio = {
+    src: "",
+    onended: null as null | (() => void),
+    onerror: null as null | (() => void),
+    async play() {
+      playedSources.push(this.src);
+      queueMicrotask(() => this.onended?.());
+    },
+    pause() {},
+  };
+  const controller = new AbortController();
+
+  await playSpeechQueue({
+    chunks: ["first", "second"],
+    async synthesize(chunk) {
+      return `data:audio/mpeg;base64,${chunk}`;
+    },
+    play: (source) => playAudioSource(audio, source, controller.signal),
+  });
+
+  assert.deepEqual(playedSources, [
+    "data:audio/mpeg;base64,first",
+    "data:audio/mpeg;base64,second",
+  ]);
 });

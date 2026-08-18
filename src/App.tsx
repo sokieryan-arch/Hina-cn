@@ -10,7 +10,7 @@ import { SettingsModal } from "./components/SettingsModal.js";
 import { pickChatPlaceholder } from "./i18n/chatPlaceholder.js";
 import { ambientPresence, resolvePresence } from "./lib/presence.js";
 import { splitSpeechText } from "./lib/speechChunks.js";
-import { playSpeechQueue } from "./lib/speechPlayback.js";
+import { playAudioSource, playSpeechQueue } from "./lib/speechPlayback.js";
 import type { BillingSummary, CurrentUser, Message, ProactiveSettings, WishlistSuggestion } from "./shared/types.js";
 
 const HinaSpace = lazy(() => import("./components/HinaSpace.js").then((module) => ({ default: module.HinaSpace })));
@@ -164,6 +164,8 @@ export default function App() {
 
     const controller = new AbortController();
     speechAbortRef.current = controller;
+    const audio = new Audio();
+    audioRef.current = audio;
 
     try {
       setSpeakingMessageId(messageId);
@@ -175,38 +177,18 @@ export default function App() {
           if (!data?.audio) throw new Error("speech_unavailable");
           return data;
         },
-        play: (data) => new Promise<void>((resolve, reject) => {
-          if (controller.signal.aborted) {
-            resolve();
-            return;
-          }
-
-          const audio = new Audio(`data:${data.mimeType};base64,${data.audio}`);
-          audioRef.current = audio;
-          let settled = false;
-
-          const finish = (error?: unknown) => {
-            if (settled) return;
-            settled = true;
-            controller.signal.removeEventListener("abort", onAbort);
-            if (audioRef.current === audio) audioRef.current = null;
-            if (error) reject(error);
-            else resolve();
-          };
-          const onAbort = () => {
-            audio.pause();
-            finish();
-          };
-
-          controller.signal.addEventListener("abort", onAbort, { once: true });
-          audio.onended = () => finish();
-          audio.onerror = () => finish(new Error("speech_playback_failed"));
-          audio.play().catch((error) => finish(error));
-        }),
+        play: (data) => playAudioSource(
+          audio,
+          `data:${data.mimeType};base64,${data.audio}`,
+          controller.signal,
+        ),
       });
     } catch (error) {
       if (!controller.signal.aborted) console.error(error);
     } finally {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
       if (speechAbortRef.current === controller) {
         speechAbortRef.current = null;
         audioRef.current = null;
