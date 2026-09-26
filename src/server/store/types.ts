@@ -3,6 +3,7 @@ import type { WishlistKind } from "../../shared/types.js";
 import type { BillingPlan, BillingSummary } from "../billing.js";
 import type { ProactiveSettings } from "../proactive.js";
 import type { AuthStores } from "../auth/types.js";
+import type { PracticeHistoryRecord, PracticeSkill } from "../../shared/practiceTypes.js";
 
 export interface MessageRecord {
   id: string;
@@ -43,6 +44,12 @@ export interface BillingStore {
   getBillingSummary(userId: string, now?: Date): Promise<BillingSummary>;
   incrementChatUsage(userId: string, now?: Date): Promise<BillingSummary>;
   setPlan(userId: string, plan: BillingPlan, proExpiresAt?: Date | null, now?: Date): Promise<BillingSummary>;
+}
+
+export interface PracticeStore {
+  list(userId: string): Promise<PracticeHistoryRecord[]>;
+  upsert(userId: string, record: PracticeHistoryRecord): Promise<void>;
+  remove(userId: string, skill?: PracticeSkill): Promise<void>;
 }
 
 export interface HinaMomentRecord {
@@ -152,6 +159,7 @@ export interface AppStore {
   messages: MessageStore;
   proactive: ProactiveSettingsStore;
   billing: BillingStore;
+  practice: PracticeStore;
   space: SpaceStore;
   account: AccountStore;
 }

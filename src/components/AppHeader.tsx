@@ -2,10 +2,11 @@ import { ArrowLeft, Moon, Settings, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { PRESENCE_DEFINITIONS, type PresenceStatus } from "../lib/presence.js";
 
-export type AppView = "chat" | "space" | "moments" | "notes" | "wishlist" | "relationship";
+export type AppView = "chat" | "space" | "practice" | "moments" | "notes" | "wishlist" | "relationship";
 
 const VIEW_TITLES: Record<Exclude<AppView, "chat">, string> = {
   space: "🪐 Hina's Space",
+  practice: "🎯 IELTS Practice",
   moments: "📸 Hina's Moments",
   notes: "✍️ Hina's Notes",
   wishlist: "🎒 Hina's List",

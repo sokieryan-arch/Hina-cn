@@ -14,6 +14,7 @@ import type {
   UserSafetyProfileRecord,
   WishlistItemRecord,
 } from "./types.js";
+import type { PracticeHistoryRecord } from "../../shared/practiceTypes.js";
 
 export function createMemoryAppStore(): AppStore {
   const auth = createMemoryAuthStores();
@@ -34,6 +35,7 @@ export function createMemoryAppStore(): AppStore {
     contact?: string | null;
     createdAt: Date;
   }>>();
+  const practiceRecords = new Map<string, Map<string, PracticeHistoryRecord>>();
 
   async function getProactiveSettings(userId: string) {
     const existing = proactive.get(userId);
@@ -70,6 +72,25 @@ export function createMemoryAppStore(): AppStore {
 
   return {
     auth,
+    practice: {
+      async list(userId) {
+        return [...(practiceRecords.get(userId)?.values() ?? [])]
+          .sort((left, right) => right.createdAt - left.createdAt)
+          .slice(0, 100)
+          .map((record) => structuredClone(record));
+      },
+      async upsert(userId, record) {
+        const records = practiceRecords.get(userId) ?? new Map<string, PracticeHistoryRecord>();
+        records.set(`${record.skill}:${record.id}`, structuredClone(record));
+        practiceRecords.set(userId, records);
+      },
+      async remove(userId, skill) {
+        if (!skill) return void practiceRecords.delete(userId);
+        const records = practiceRecords.get(userId);
+        if (!records) return;
+        for (const [key, record] of records) if (record.skill === skill) records.delete(key);
+      },
+    },
     messages: {
       async listMessages(userId) {
         return [...(messages.get(userId) ?? [])].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());

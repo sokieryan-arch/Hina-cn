@@ -128,3 +128,29 @@ test("sends strengthened Hina style and schema instructions to Ark JSON mode", a
   assert.match(systemMessage, /Tip 1/i);
   assert.match(systemMessage, /Tip 2/i);
 });
+
+test("sends IELTS speaking audio to Ark multimodal input and normalizes feedback", async () => {
+  let requestBody: any;
+  const provider = new VolcengineArkProvider({
+    apiKey: "ark-test-key",
+    baseUrl: "https://ark.example.test/api/v3",
+    chatModel: "doubao-test",
+    fetchImpl: async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+        transcript: "I enjoy the morning because I can read and plan my day before work starts.",
+        summary: "Clear and relevant.",
+        scores: { fluency: 6, lexicalResource: 6, grammar: 6, pronunciation: 6 },
+        strengths: ["The phrase plan my day is clear."],
+        priorities: ["Add one specific example."],
+        improvedAnswer: "I enjoy the morning most because it gives me quiet time to read and plan my day.",
+        studyNote: "Develop answers with a reason and example.",
+        studyCards: [],
+      }) } }] }));
+    },
+  });
+  const result = await provider.evaluateSpeaking({ questionId: "part1-daily-rhythm", audioBase64: "YWJj", mimeType: "audio/webm", nativeLanguage: "zh-CN" });
+  assert.equal(result.transcript.startsWith("I enjoy"), true);
+  assert.equal(requestBody.messages[0].content[1].type, "input_audio");
+  assert.equal(requestBody.messages[0].content[1].input_audio.data, "YWJj");
+});

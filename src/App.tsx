@@ -272,7 +272,7 @@ export default function App() {
 
       {view !== "chat" ? (
         <Suspense fallback={<div className="flex-1 bg-[#FDFBF7] dark:bg-[#1c1224]" />}>
-          <HinaSpace view={view} onNavigate={setView} />
+          <HinaSpace view={view} onNavigate={setView} practiceOwnerId={user.id} />
         </Suspense>
       ) : (
         <>

@@ -22,6 +22,8 @@ import type { WishlistKind } from "../shared/types.js";
 import { parseIdentifier } from "./auth/identifiers.js";
 import { hasImmediateSafetyRisk, SAFETY_SUPPORT_MESSAGE } from "./safety.js";
 import type { WeChatContentSafety } from "./wechatContentSafety.js";
+import { readPracticeHistoryRecord, readPracticeSkill } from "./practiceHistory.js";
+import type { SpeakingStudyCard } from "../shared/practiceTypes.js";
 
 const PRIVACY_VERSION = "2026-07-24";
 
@@ -510,6 +512,36 @@ export function registerApiRoutes(deps: ApiDependencies) {
     }
   });
 
+  app.post("/api/space/practice-notes", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const cards = Array.isArray(req.body?.cards) ? req.body.cards.slice(0, 8) as SpeakingStudyCard[] : [];
+      const context = optionalText(req.body?.context, 500);
+      let saved = 0;
+      for (const card of cards) {
+        if (!card || !["grammar", "vocabulary", "expression", "pronunciation"].includes(card.kind)) continue;
+        const title = requiredText(card.title, "title", 160);
+        const body = requiredText(card.body, "body", 1600);
+        const category = card.kind === "pronunciation" ? "expression" : card.kind;
+        const note = await store.space.saveNote({
+          userId: user.id,
+          category,
+          title,
+          body,
+          example: context,
+          original: null,
+          suggestion: null,
+          sourceMessageId: null,
+          dedupeKey: `practice:${category}:${title.toLowerCase()}:${body.toLowerCase().slice(0, 120)}`,
+        });
+        if (note) saved += 1;
+      }
+      res.json({ saved });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
   app.delete("/api/space/notes", async (req, res) => {
     try {
       const user = await requireUser(req, deps);
@@ -649,6 +681,53 @@ export function registerApiRoutes(deps: ApiDependencies) {
     } catch (error) {
       sendError(res, error);
     }
+  });
+
+  app.get("/api/practice/history", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      res.json({ records: await store.practice.list(user.id) });
+    } catch (error) { sendError(res, error); }
+  });
+
+  app.put("/api/practice/history/:id", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const record = readPracticeHistoryRecord(req.body);
+      if (record.id !== req.params.id) return res.status(400).json({ error: "practice_id_mismatch" });
+      await store.practice.upsert(user.id, record);
+      res.json({ ok: true });
+    } catch (error) { sendError(res, error); }
+  });
+
+  app.delete("/api/practice/history", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      await store.practice.remove(user.id, readPracticeSkill(req.query.skill));
+      res.json({ ok: true });
+    } catch (error) { sendError(res, error); }
+  });
+
+  app.post("/api/practice/speaking/evaluate", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const billing = await store.billing.getBillingSummary(user.id);
+      if (!canUseChat(billing)) return res.status(402).json({ error: "quota_exceeded", billing });
+      if (!deps.provider.evaluateSpeaking) return res.status(503).json({ error: "practice_evaluation_unavailable" });
+      const evaluation = await deps.provider.evaluateSpeaking(req.body);
+      res.json({ evaluation, billing: await store.billing.incrementChatUsage(user.id) });
+    } catch (error) { sendError(res, error); }
+  });
+
+  app.post("/api/practice/writing/evaluate", async (req, res) => {
+    try {
+      const user = await requireUser(req, deps);
+      const billing = await store.billing.getBillingSummary(user.id);
+      if (!canUseChat(billing)) return res.status(402).json({ error: "quota_exceeded", billing });
+      if (!deps.provider.evaluateWriting) return res.status(503).json({ error: "practice_evaluation_unavailable" });
+      const evaluation = await deps.provider.evaluateWriting(req.body);
+      res.json({ evaluation, billing: await store.billing.incrementChatUsage(user.id) });
+    } catch (error) { sendError(res, error); }
   });
 
   app.post("/api/chat", async (req, res) => {
