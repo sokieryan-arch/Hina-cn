@@ -32,10 +32,13 @@ import type {
   WishlistKind,
 } from "../shared/types.js";
 import type { AppView } from "./AppHeader.js";
+import { PracticeCenter } from "./PracticeCenter.js";
+import type { ObjectivePracticeSkill, SpeakingPart, SpeakingStudyCard, WritingTaskType } from "../shared/practiceTypes.js";
 
 interface HinaSpaceProps {
   view: Exclude<AppView, "chat">;
   onNavigate: (view: Exclude<AppView, "chat">) => void;
+  practiceOwnerId?: string;
 }
 
 const SPACE_ITEMS = [
@@ -90,6 +93,21 @@ function EmptyState({ icon, title, copy }: { icon: React.ReactNode; title: strin
 function SpaceHome({ onNavigate }: Pick<HinaSpaceProps, "onNavigate">) {
   return (
     <PageShell centered>
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => onNavigate("practice")}
+        className="group mb-5 flex min-h-28 w-full items-center gap-4 rounded-[24px] border border-[#E6C98A] bg-[#FFF8E7] p-5 text-left text-[#6E5119] shadow-[0_5px_18px_rgba(68,55,35,0.08)] transition-all hover:-translate-y-1 hover:shadow-[0_10px_28px_rgba(68,55,35,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9F1C] dark:border-[#5a4669] dark:bg-[#33263e] dark:text-[#f6d98e] dark:shadow-none sm:p-6"
+        data-space-practice
+      >
+        <span className="text-3xl sm:text-4xl" aria-hidden="true">🎯</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-lg font-bold tracking-normal sm:text-xl">IELTS Practice</span>
+          <span className="mt-1 block text-xs leading-relaxed opacity-80 sm:text-sm">Train listening, reading, writing and speaking with Hina.</span>
+        </span>
+        <ChevronRight size={20} className="shrink-0 opacity-50 transition-transform group-hover:translate-x-1" />
+      </motion.button>
       <div className="grid grid-cols-2 gap-4 sm:gap-5" data-space-grid>
         {SPACE_ITEMS.map((item, index) => (
           <motion.button
@@ -529,8 +547,22 @@ function RelationshipPage() {
   );
 }
 
-export function HinaSpace({ view, onNavigate }: HinaSpaceProps) {
+export function HinaSpace({ view, onNavigate, practiceOwnerId = "preview" }: HinaSpaceProps) {
   if (view === "space") return <SpaceHome onNavigate={onNavigate} />;
+  if (view === "practice") return (
+    <PracticeCenter
+      ownerId={practiceOwnerId}
+      nativeLanguage="zh-CN"
+      onEvaluateSpeaking={async (input) => (await api.evaluateSpeaking(input)).evaluation}
+      onEvaluateWriting={async (input) => (await api.evaluateWriting(input)).evaluation}
+      onSaveSpeakingStudyCards={(cards: SpeakingStudyCard[], context: { part: SpeakingPart; question: string }) => api.savePracticeNotes(cards, `IELTS Speaking Part ${context.part}: ${context.question}`).then(() => undefined)}
+      onSaveWritingStudyCards={(cards: SpeakingStudyCard[], context: { question: string; taskType: WritingTaskType }) => api.savePracticeNotes(cards, `IELTS Writing ${context.taskType === "task1" ? "Task 1" : "Task 2"}: ${context.question}`).then(() => undefined)}
+      onSaveObjectiveStudyCards={(cards: SpeakingStudyCard[], context: { skill: ObjectivePracticeSkill }) => api.savePracticeNotes(cards, `IELTS ${context.skill}`).then(() => undefined)}
+      onLoadPracticeHistory={async () => (await api.practiceHistory()).records}
+      onSavePracticeRecord={(record) => api.savePracticeRecord(record).then(() => undefined)}
+      onClearPracticeHistory={(skill) => api.clearPracticeHistory(skill).then(() => undefined)}
+    />
+  );
   if (view === "moments") return <MomentsPage />;
   if (view === "notes") return <NotesPage />;
   if (view === "wishlist") return <WishlistPage />;

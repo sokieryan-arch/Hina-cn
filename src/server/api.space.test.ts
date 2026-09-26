@@ -125,3 +125,48 @@ test("moments are global while relationship counts real conversation days", asyn
     assert.equal(relationship.relationship.sharedMemories, 1);
   });
 });
+
+test("practice history is account scoped and supports skill clearing", async () => {
+  await withServer(async (baseUrl) => {
+    const record = {
+      id: "reading-attempt-1",
+      skill: "reading",
+      createdAt: 1_800_000_000_000,
+      attempt: {
+        id: "reading-attempt-1",
+        skill: "reading",
+        createdAt: 1_800_000_000_000,
+        correct: 30,
+        total: 40,
+        estimatedBand: 7,
+        durationSeconds: 1800,
+        sectionScores: [10, 10, 10],
+        answers: {},
+        wrongQuestionIds: [],
+      },
+    };
+    const saved = await fetch(`${baseUrl}/api/practice/history/${record.id}`, { method: "PUT", headers, body: JSON.stringify(record) });
+    assert.equal(saved.status, 200);
+    const history = await fetch(`${baseUrl}/api/practice/history`, { headers }).then((response) => response.json()) as any;
+    assert.equal(history.records.length, 1);
+    assert.equal(history.records[0].skill, "reading");
+    const cleared = await fetch(`${baseUrl}/api/practice/history?skill=reading`, { method: "DELETE", headers });
+    assert.equal(cleared.status, 200);
+    const empty = await fetch(`${baseUrl}/api/practice/history`, { headers }).then((response) => response.json()) as any;
+    assert.equal(empty.records.length, 0);
+  });
+});
+
+test("practice study cards are saved into Hina notes", async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/space/practice-notes`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ cards: [{ kind: "pronunciation", title: "Word stress", body: "Stress the first syllable." }], context: "IELTS Speaking Part 1" }),
+    });
+    assert.equal(response.status, 200);
+    const notes = await fetch(`${baseUrl}/api/space/notes`, { headers }).then((item) => item.json()) as any;
+    assert.equal(notes.notes[0].category, "expression");
+    assert.equal(notes.notes[0].title, "Word stress");
+  });
+});

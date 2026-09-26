@@ -9,6 +9,10 @@ import type {
   SpeechProvider,
   SpeechResponse,
 } from "./types.js";
+import { findSpeakingQuestion } from "../../practice/speakingQuestions.js";
+import { buildSpeakingEvaluationPrompt, normalizeSpeakingEvaluation, readSpeakingEvaluationInput } from "../speaking.js";
+import { buildWritingEvaluationPrompt, normalizeWritingEvaluation, readWritingEvaluationInput } from "../writing.js";
+import type { SpeakingEvaluationInput, WritingEvaluationInput } from "../../shared/practiceTypes.js";
 
 interface ArkProviderOptions {
   apiKey?: string;
@@ -91,6 +95,49 @@ export class VolcengineArkProvider implements LanguagePartnerProvider, SpeechPro
     }
 
     return parseHinaResponse(extractText(payload));
+  }
+
+  private async practiceJson(content: unknown) {
+    if (!this.apiKey) throw new Error("missing_ark_api_key");
+    if (!this.chatModel) throw new Error("missing_ark_chat_model");
+    const response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: [
+        ["Authorization", `Bearer ${this.apiKey}`],
+        ["Content-Type", "application/json"],
+      ],
+      body: JSON.stringify({
+        model: this.chatModel,
+        messages: [{ role: "user", content }],
+        response_format: { type: "json_object" },
+        temperature: 0,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(`ark_practice_failed:${response.status}`);
+    const value = extractText(payload);
+    if (!value) throw new Error("ark_practice_empty");
+    return JSON.parse(value);
+  }
+
+  async evaluateSpeaking(rawInput: SpeakingEvaluationInput) {
+    const input = readSpeakingEvaluationInput(rawInput);
+    const question = findSpeakingQuestion(input.questionId);
+    const parsed = await this.practiceJson([
+      { type: "text", text: buildSpeakingEvaluationPrompt(input) },
+      { type: "input_audio", input_audio: { data: input.audioBase64 } },
+    ]);
+    return normalizeSpeakingEvaluation(parsed, { part: question?.part, nativeLanguage: input.nativeLanguage });
+  }
+
+  async evaluateWriting(rawInput: WritingEvaluationInput) {
+    const input = readWritingEvaluationInput(rawInput);
+    const parsed = await this.practiceJson(buildWritingEvaluationPrompt(input));
+    return normalizeWritingEvaluation(parsed, {
+      essay: input.essay,
+      nativeLanguage: input.nativeLanguage,
+      questionId: input.questionId,
+    });
   }
 
   async draftProactiveOpener(input: Parameters<LanguagePartnerProvider["draftProactiveOpener"]>[0]) {

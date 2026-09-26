@@ -147,6 +147,30 @@ export function createPostgresAppStore(databaseUrl: string): AppStore {
   }
 
   return {
+    practice: {
+      async list(userId) {
+        const result = await pool.query(
+          "select record from practice_attempts where user_id = $1 order by created_at desc limit 100",
+          [userId],
+        );
+        return result.rows.map((row) => row.record);
+      },
+      async upsert(userId, record) {
+        await pool.query(
+          `insert into practice_attempts (user_id, skill, attempt_id, created_at, record, updated_at)
+           values ($1, $2, $3, to_timestamp($4 / 1000.0), $5::jsonb, now())
+           on conflict (user_id, skill, attempt_id) do update set
+             created_at = excluded.created_at,
+             record = excluded.record,
+             updated_at = now()`,
+          [userId, record.skill, record.id, record.createdAt, JSON.stringify(record)],
+        );
+      },
+      async remove(userId, skill) {
+        if (skill) await pool.query("delete from practice_attempts where user_id = $1 and skill = $2", [userId, skill]);
+        else await pool.query("delete from practice_attempts where user_id = $1", [userId]);
+      },
+    },
     auth: {
       users: {
         async findById(id) {

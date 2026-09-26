@@ -13,6 +13,7 @@ import type {
 } from "../shared/types.js";
 import type { StudyCategory } from "../shared/languageTips.js";
 import { withAppBase } from "../lib/appPath.js";
+import type { PracticeHistoryRecord, PracticeSkill, SpeakingEvaluation, SpeakingEvaluationInput, SpeakingStudyCard, WritingEvaluation, WritingEvaluationInput } from "../shared/practiceTypes.js";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -132,4 +133,10 @@ export const api = {
     apiFetch<{ capsule: TimeCapsule }>("/api/space/capsules", { method: "POST", body: JSON.stringify(input) }),
   openCapsule: (id: string) => apiFetch<{ capsule: TimeCapsule }>(`/api/space/capsules/${encodeURIComponent(id)}/open`, { method: "POST" }),
   relationship: () => apiFetch<{ relationship: RelationshipSummary }>("/api/space/relationship"),
+  practiceHistory: () => apiFetch<{ records: PracticeHistoryRecord[] }>("/api/practice/history"),
+  savePracticeRecord: (record: PracticeHistoryRecord) => apiFetch<{ ok: true }>(`/api/practice/history/${encodeURIComponent(record.id)}`, { method: "PUT", body: JSON.stringify(record) }),
+  clearPracticeHistory: (skill: PracticeSkill) => apiFetch<{ ok: true }>(`/api/practice/history?skill=${encodeURIComponent(skill)}`, { method: "DELETE" }),
+  evaluateSpeaking: (input: SpeakingEvaluationInput) => apiFetch<{ evaluation: SpeakingEvaluation; billing: BillingSummary }>("/api/practice/speaking/evaluate", { method: "POST", body: JSON.stringify(input) }),
+  evaluateWriting: (input: WritingEvaluationInput) => apiFetch<{ evaluation: WritingEvaluation; billing: BillingSummary }>("/api/practice/writing/evaluate", { method: "POST", body: JSON.stringify(input) }),
+  savePracticeNotes: (cards: SpeakingStudyCard[], context: string) => apiFetch<{ saved: number }>("/api/space/practice-notes", { method: "POST", body: JSON.stringify({ cards, context }) }),
 };
